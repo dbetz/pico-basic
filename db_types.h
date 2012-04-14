@@ -150,13 +150,16 @@ typedef void **VMHANDLE;
 #include <stdint.h>
 #include <string.h>
 #include <libpic30.h>
-#include "ebasic_pic24/MDD File System/FSIO.h"
+//#include "ebasic_pic24/MDD File System/FSIO.h"
 
 typedef int16_t VMVALUE;
 typedef uint16_t VMUVALUE;
 typedef float VMFLOAT;
 typedef void **VMHANDLE;
 
+typedef void VMFILE;
+
+#if 0
 typedef FSFILE VMFILE;
 
 struct VMDIR {
@@ -167,6 +170,7 @@ struct VMDIR {
 struct VMDIRENT {
     char name[FILE_NAME_SIZE_8P3 + 2];
 };
+#endif
 
 #ifdef PIC24
 #include <p24hxxxx.h>

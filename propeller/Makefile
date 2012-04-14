@@ -1,5 +1,7 @@
 NAME = ebasic
 
+VPATH = ..
+
 OBJS = \
 ebasic.o \
 db_compiler.o \
@@ -14,16 +16,12 @@ db_vmdebug.o \
 db_vmfcn.o \
 db_vmheap.o \
 db_vmint.o \
-osint_posix.o
+osint_propgcc.o
 
-CFLAGS = -Os -DLINUX
-LDFLAGS = $(CFLAGS)
+ifndef MODEL
+MODEL = xmmc
+endif
 
-$(NAME): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+CFLAGS = -Os -DPROPELLER_GCC -DUSE_FDS -DLOAD_SAVE
 
-%.o: %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
-
-clean:
-	rm -f *.o $(NAME)
+include common.mk

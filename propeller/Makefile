@@ -22,6 +22,6 @@ ifndef MODEL
 MODEL = xmmc
 endif
 
-CFLAGS = -Os -I.. -DPROPELLER_GCC -DUSE_FDS -DLOAD_SAVE
+CFLAGS = -Wall -Os -I.. -DPROPELLER_GCC # -DUSE_FDS -DLOAD_SAVE
 
 include common.mk

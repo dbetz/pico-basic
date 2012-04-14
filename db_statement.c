@@ -249,7 +249,7 @@ static void ParseDim(ParseContext *c)
             if (isArray)
                 sym->v.hValue = StoreIntegerVector(c->heap, (VMVALUE *)c->codeBuf, size);
             else
-                sym->v.iValue = 0;
+                sym->v.iValue = value;
         }
 
         /* otherwise, add to the local symbol table */
@@ -366,7 +366,7 @@ static void ParseArrayInitializers(ParseContext *c, VMVALUE size)
                 ParseError(c, "insufficient object data space", NULL);
             *dataPtr++ = expr->u.integerLit.value;
 
-            switch (tkn = GetToken(c)) {
+            switch ((int)(tkn = GetToken(c))) {
             case T_EOL:
                 lineDone = VMTRUE;
                 break;
@@ -402,7 +402,7 @@ static void ParseImpliedLetOrFunctionCall(ParseContext *c)
     Token tkn;
     PVAL pv;
     expr = ParsePrimary(c);
-    switch (tkn = GetToken(c)) {
+    switch ((int)(tkn = GetToken(c))) {
     case '=':
         code_lvalue(c, expr, &pv);
         ParseRValue(c);
@@ -582,12 +582,12 @@ static void ParseFor(ParseContext *c)
 /* ParseNext - parse the 'NEXT' statement */
 static void ParseNext(ParseContext *c)
 {
-    ParseTreeNode *var;
+    //ParseTreeNode *var;
     int inst;
     switch (CurrentBlockType(c)) {
     case BLOCK_FOR:
         FRequire(c, T_IDENTIFIER);
-        var = GetSymbolRef(c, c->token);
+        //var = GetSymbolRef(c, c->token);
         /* BUG: check to make sure it matches the symbol used in the FOR */
         inst = putcbyte(c, OP_BR);
         putcword(c, c->bptr->u.ForBlock.nxt - inst - 1 - sizeof(VMUVALUE));
@@ -731,7 +731,7 @@ static void ParsePrint(ParseContext *c)
     Token tkn;
 
     while ((tkn = GetToken(c)) != T_EOL) {
-        switch (tkn) {
+        switch ((int)tkn) {
         case ',':
             needNewline = VMFALSE;
             CallHandler(c, "printTab", NULL);

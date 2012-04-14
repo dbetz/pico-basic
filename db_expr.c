@@ -134,7 +134,7 @@ static ParseTreeNode *ParseExpr6(ParseContext *c)
     while ((tkn = GetToken(c)) == '=' || tkn == T_NE) {
         int op;
         expr2 = ParseExpr7(c);
-        switch (tkn) {
+        switch ((int)tkn) {
         case '=':
             op = OP_EQ;
             break;
@@ -161,7 +161,7 @@ static ParseTreeNode *ParseExpr7(ParseContext *c)
     while ((tkn = GetToken(c)) == '<' || tkn == T_LE || tkn == T_GE || tkn == '>') {
         int op;
         expr2 = ParseExpr8(c);
-        switch (tkn) {
+        switch ((int)tkn) {
         case '<':
             op = OP_LT;
             break;
@@ -236,7 +236,7 @@ static ParseTreeNode *ParseExpr9(ParseContext *c)
     while ((tkn = GetToken(c)) == '+' || tkn == '-') {
         expr2 = ParseExpr10(c);
         if (IsIntegerLit(expr) && IsIntegerLit(expr2)) {
-            switch (tkn) {
+            switch ((int)tkn) {
             case '+':
                 expr->u.integerLit.value = expr->u.integerLit.value + expr2->u.integerLit.value;
                 break;
@@ -250,7 +250,7 @@ static ParseTreeNode *ParseExpr9(ParseContext *c)
         }
         else {
             int op;
-            switch (tkn) {
+            switch ((int)tkn) {
             case '+':
                 op = expr->type == CommonType(c, stringType) ? OP_CAT : OP_ADD;
                 break;
@@ -278,7 +278,7 @@ static ParseTreeNode *ParseExpr10(ParseContext *c)
     while ((tkn = GetToken(c)) == '*' || tkn == '/' || tkn == T_MOD) {
         node2 = ParseExpr11(c);
         if (IsIntegerLit(node) && IsIntegerLit(node2)) {
-            switch (tkn) {
+            switch ((int)tkn) {
             case '*':
                 node->u.integerLit.value = node->u.integerLit.value * node2->u.integerLit.value;
                 break;
@@ -299,7 +299,7 @@ static ParseTreeNode *ParseExpr10(ParseContext *c)
         }
         else {
             int op;
-            switch (tkn) {
+            switch ((int)tkn) {
             case '*':
                 op = OP_MUL;
                 break;
@@ -326,7 +326,7 @@ static ParseTreeNode *ParseExpr11(ParseContext *c)
 {
     ParseTreeNode *node;
     Token tkn;
-    switch (tkn = GetToken(c)) {
+    switch ((int)(tkn = GetToken(c))) {
     case '+':
         node = ParsePrimary(c);
         break;
@@ -366,12 +366,15 @@ ParseTreeNode *ParsePrimary(ParseContext *c)
     int tkn;
     node = ParseSimplePrimary(c);
     while ((tkn = GetToken(c)) == '(' || tkn == '[') {
-        switch (tkn) {
+        switch ((int)tkn) {
         case '[':
             node = ParseArrayReference(c, node);
             break;
         case '(':
             node = ParseCall(c, node);
+            break;
+        default:
+            /* not reached */
             break;
         }
     }

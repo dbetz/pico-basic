@@ -116,7 +116,7 @@ int DecodeInstruction(VMUVALUE base, const uint8_t *code, const uint8_t *lc)
                 n += sizeof(VMVALUE);
                 break;
             case FMT_BR:
-                for (i = 0; i < sizeof(VMVALUE); ++i) {
+                for (i = 0, offset = 0; i < sizeof(VMVALUE); ++i) {
                     bytes[i] = VMCODEBYTE(lc + i + 1);
                     offset = (offset << 8) | bytes[i];
                     VM_printf("%02x ", bytes[i]);

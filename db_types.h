@@ -56,7 +56,6 @@ typedef void **VMHANDLE;
 #define DATA_SPACE
 
 #define VMCODEBYTE(p)           *(uint8_t *)(p)
-#define VMINTRINSIC(i)          Intrinsics[i]
 
 #define ANSI_FILE_IO
 
@@ -84,7 +83,6 @@ typedef void **VMHANDLE;
 #define DATA_SPACE
 
 #define VMCODEBYTE(p)           *(uint8_t *)(p)
-#define VMINTRINSIC(i)          Intrinsics[i]
 
 #define ANSI_FILE_IO
 
@@ -111,7 +109,6 @@ typedef void **VMHANDLE;
 #define DATA_SPACE
 
 #define VMCODEBYTE(p)           *(uint8_t *)(p)
-#define VMINTRINSIC(i)          Intrinsics[i]
 
 #define ANSI_FILE_IO
 
@@ -184,7 +181,6 @@ struct VMDIRENT {
 #define FLASH_SPACE             const
 #define DATA_SPACE              __attribute__((far))
 #define VMCODEBYTE(p)           *(p)
-#define VMINTRINSIC(i)          Intrinsics[i]
 
 #define snprintf    __simple_snprintf
 #define vsnprintf   __simple_vsnprintf
@@ -212,7 +208,6 @@ typedef void **VMHANDLE;
 #define DATA_SPACE
 
 #define VMCODEBYTE(p)           *(p)
-#define VMINTRINSIC(i)          Intrinsics[i]
 
 #define ANSI_FILE_IO
 
@@ -282,7 +277,6 @@ typedef void **VMHANDLE;
 #define DATA_SPACE
 
 #define VMCODEBYTE(p)           pgm_read_byte(p)
-#define VMINTRINSIC(i)          ((IntrinsicFcn *)pgm_read_word(&Intrinsics[i]))
 
 #define ANSI_FILE_IO
 
@@ -307,7 +301,6 @@ int strcasecmp(const char *s1, const char *s2);
 #define DATA_SPACE
 
 #define VMCODEBYTE(p)           *(uint8_t *)(p)
-#define VMINTRINSIC(i)          Intrinsics[i]
 
 #define PROPELLER
 #define ANSI_FILE_IO
@@ -332,7 +325,6 @@ int strcasecmp(const char *s1, const char *s2);
 #define DATA_SPACE
 
 #define VMCODEBYTE(p)           *(uint8_t *)(p)
-#define VMINTRINSIC(i)          Intrinsics[i]
 
 #define PROPELLER
 #define ANSI_FILE_IO
@@ -354,7 +346,6 @@ int strcasecmp(const char *s1, const char *s2);
 #define DATA_SPACE
 
 #define VMCODEBYTE(p)           *(uint8_t *)(p)
-#define VMINTRINSIC(i)          Intrinsics[i]
 
 #define PROPELLER
 #define ANSI_FILE_IO

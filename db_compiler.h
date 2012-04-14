@@ -133,6 +133,14 @@ typedef enum {
 /* get a handle to one of the common types */
 #define CommonType(c, field)        (&(c)->field.data)
 
+/* add an intrinsic function to the symbol table */
+#define AddIntrinsic(c, name, id, types)                            \
+            {                                                       \
+                DefIntrinsic(id);                                   \
+                id##_struct.data = (void *)&id##_struct.handler;    \
+                AddIntrinsic1(c, name, types, IntrinsicHandle(id)); \
+            }
+
 /* parse context */
 typedef struct {
     System *sys;                    /* system context */
@@ -262,7 +270,7 @@ ParseContext *InitCompiler(System *sys, int maxObjects);
 VMHANDLE Compile(ParseContext *c, int oneStatement);
 void StartCode(ParseContext *c, char *name, CodeType type);
 void StoreCode(ParseContext *c);
-void AddIntrinsic(ParseContext *c, char *name, char *types, int index);
+void AddIntrinsic1(ParseContext *c, char *name, char *types, VMHANDLE handler);
 void *LocalAlloc(ParseContext *c, size_t size);
 void Fatal(ParseContext *c, const char *fmt, ...);
 

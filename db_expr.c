@@ -411,14 +411,7 @@ static ParseTreeNode *ParseCall(ParseContext *c, ParseTreeNode *functionNode)
     if ((tkn = GetToken(c)) != ')') {
         SaveToken(c, tkn);
         do {
-            ExprListEntry *actual = (ExprListEntry *)LocalAlloc(c, sizeof(ExprListEntry));
-            actual->expr = ParseExpr(c);
-            if (!(actual->prev = list->tail))
-                list->head = actual;
-            else
-                list->tail->next = actual;
-            list->tail = actual;
-            actual->next = NULL;
+            AddExprToList(c, list, ParseExpr(c));
             ++node->u.functionCall.argc;
         } while ((tkn = GetToken(c)) == ',');
         Require(c, tkn, ')');

@@ -18,7 +18,8 @@ typedef enum {
     ObjTypeLocal,
     ObjTypeType,
     ObjTypeString,
-    ObjTypeCode
+    ObjTypeCode,
+    ObjTypeIntrinsic
 } ObjType;
 
 /* object header structure */
@@ -89,12 +90,38 @@ typedef struct {
     } u;
 } Type;
 
-/* structure used to construct constant types */
+/* structure used to construct constant type objects */
 typedef struct {
-    void *data; // this should point to the hdr field
+    void *data; // this should point to the type field
     ObjHdr hdr; // this should contain a NULL handle
     Type type;
 } ConstantType;
+
+typedef void IntrinsicHandler(void *i);
+
+/* structure used to construct intrinsic function objects */
+typedef struct {
+    void *data; // this should point to the type field
+    ObjHdr hdr; // this should contain a NULL handle
+    void (*handler)(void *i);
+} IntrinsicFunction;
+
+/* initialize a common type field */
+#define DefIntrinsic(name)                                                      \
+            void fcn_##name(void *i);                                           \
+            static IntrinsicFunction name##_struct = {                          \
+                            NULL,                           /* data */          \
+                            {                                                   \
+                                NULL,                       /* hdr.handle */    \
+                                0,                          /* hdr.refCnt */    \
+                                ObjTypeIntrinsic,           /* hdr.type */      \
+                                sizeof(IntrinsicHandler *)  /* hdr.size */      \
+                            },                                                  \
+                            fcn_##name                      /* handler */       \
+            }
+            
+/* get an intrinsic handle */
+#define IntrinsicHandle(name)   &name##_struct.data
 
 /* macros to get the base address of an object */
 #define GetIntegerVectorBase(h) ((VMVALUE *)GetHeapObjPtr(h))
@@ -105,6 +132,7 @@ typedef struct {
 #define GetLocalPtr(h)          ((Local *)GetHeapObjPtr(h))
 #define GetStringPtr(h)         ((uint8_t *)GetHeapObjPtr(h))
 #define GetCodePtr(h)           ((uint8_t *)GetHeapObjPtr(h))
+#define GetIntrinsicHandler(h)  (*(IntrinsicHandler **)GetHeapObjPtr(h))
 
 /* macro to get a pointer to an object in the heap */
 #define GetHeapObjPtr(h)        (*(h))

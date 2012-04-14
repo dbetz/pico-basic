@@ -15,14 +15,15 @@
 
 /* element sizes */
 static size_t elementSizes[] = {
-    sizeof(VMVALUE),    /* ObjTypeIntegerVector */
-    sizeof(VMHANDLE),   /* ObjTypeStringVector */
-    sizeof(uint8_t),    /* ObjTypeByteVector */
-    sizeof(uint8_t),    /* ObjTypeSymbol */
-    sizeof(uint8_t),    /* ObjTypeArgument */
-    sizeof(uint8_t),    /* ObjTypeType */
-    sizeof(uint8_t),    /* ObjTypeString */
-    sizeof(uint8_t)     /* ObjTypeCode */
+    sizeof(VMVALUE),            /* ObjTypeIntegerVector */
+    sizeof(VMHANDLE),           /* ObjTypeStringVector */
+    sizeof(uint8_t),            /* ObjTypeByteVector */
+    sizeof(uint8_t),            /* ObjTypeSymbol */
+    sizeof(uint8_t),            /* ObjTypeArgument */
+    sizeof(uint8_t),            /* ObjTypeType */
+    sizeof(uint8_t),            /* ObjTypeString */
+    sizeof(uint8_t),            /* ObjTypeCode */
+    sizeof(IntrinsicHandler *)  /* ObjTypeIntrinsic */
 };
 
 /* type names */
@@ -34,7 +35,8 @@ static char *typeNames[] = {
     "Local",
     "Type",
     "String",
-    "Code"
+    "Code",
+    "Intrinsic"
 };
 
 /* InitHeap - initialize a heap */

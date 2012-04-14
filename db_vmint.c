@@ -38,7 +38,7 @@
 #endif
 
 /* prototypes for local functions */
-static void StartCode(Interpreter *i, VMVALUE object);
+static void StartCode(Interpreter *i, VMHANDLE object);
 static void StringCat(Interpreter *i);
 
 /* InitInterpreter - initialize the interpreter */
@@ -219,7 +219,7 @@ int Execute(Interpreter *i, VMHANDLE main)
             break;
         case OP_CALL:
             i->argc = VMCODEBYTE(i->pc++);
-            StartCode(i, *i->sp);
+            StartCode(i, (VMHANDLE)*i->sp);
             break;
         case OP_RETURN:
             tmp = *i->sp;
@@ -239,28 +239,30 @@ int Execute(Interpreter *i, VMHANDLE main)
     }
 }
 
-static void StartCode(Interpreter *i, VMVALUE object)
+static void StartCode(Interpreter *i, VMHANDLE object)
 {
-    if (object & INTRINSIC_FLAG) {
-        VMUVALUE index = object & ~INTRINSIC_FLAG;
-        if (index < IntrinsicCount) {
-            (*VMINTRINSIC(index))(i);
-            Drop(i, i->argc);
-        }
-        else
-            Abort(i, str_not_code_object_err, object);
-    }
-    else if (object) {
-        VMVALUE tmp;
+    VMVALUE tmp;
+
+    if (!object)
+        Abort(i, str_not_code_object_err, object);
+        
+    switch (GetHeapObjType(object)) {
+    case ObjTypeCode:
         tmp = (VMVALUE)(i->fp - i->stack);
         i->fp = i->sp;
         Reserve(i, F_SIZE);
         i->fp[F_FP] = tmp;
         i->fp[F_PC] = (VMVALUE)(i->pc - i->heap->data);
         i->pc = GetCodePtr((VMHANDLE)object);
-    }
-    else
+        break;
+    case ObjTypeIntrinsic:
+        (*GetIntrinsicHandler(object))(i);
+        Drop(i, i->argc);
+        break;
+    default:
         Abort(i, str_not_code_object_err, object);
+        break;
+    }
 }
 
 static void StringCat(Interpreter *i)

@@ -25,6 +25,8 @@ ParseContext *InitCompiler(System *sys, int maxObjects)
     if (!(c = (ParseContext *)AllocateFreeSpace(sys, sizeof(ParseContext))))
         return NULL;
     memset(c, 0, sizeof(ParseContext));
+    
+    /* initialize free space */
     c->sys = sys;
     c->freeMark = sys->freeNext;
     
@@ -45,33 +47,33 @@ ParseContext *InitCompiler(System *sys, int maxObjects)
     InitSymbolTable(&c->globals);
 
     /* add the intrinsic functions */
-    AddIntrinsic(c, "ABS",          "i",    FN_ABS);
-    AddIntrinsic(c, "RND",          "i",    FN_RND);
-    AddIntrinsic(c, "LEFT$",        "s",    FN_LEFT);
-    AddIntrinsic(c, "RIGHT$",       "s",    FN_RIGHT);
-    AddIntrinsic(c, "MID$",         "s",    FN_MID);
-    AddIntrinsic(c, "CHR$",         "s",    FN_CHR);
-    AddIntrinsic(c, "STR$",         "s",    FN_STR);
-    AddIntrinsic(c, "VAL",          "i",    FN_VAL);
-    AddIntrinsic(c, "ASC",          "i",    FN_ASC);
-    AddIntrinsic(c, "LEN",          "i",    FN_LEN);
-    AddIntrinsic(c, "printStr",     "i",    FN_printStr);
-    AddIntrinsic(c, "printInt",     "i",    FN_printInt);
-    AddIntrinsic(c, "printTab",     "i",    FN_printTab);
-    AddIntrinsic(c, "printNL",      "i",    FN_printNL);
-    AddIntrinsic(c, "printFlush",   "i",    FN_printFlush);
+    AddIntrinsic(c, "ABS",          abs,        "i")
+    AddIntrinsic(c, "RND",          rnd,        "i")
+    AddIntrinsic(c, "LEFT$",        left,       "s")
+    AddIntrinsic(c, "RIGHT$",       right,      "s")
+    AddIntrinsic(c, "MID$",         mid,        "s")
+    AddIntrinsic(c, "CHR$",         chr,        "s")
+    AddIntrinsic(c, "STR$",         str,        "s")
+    AddIntrinsic(c, "VAL",          val,        "i")
+    AddIntrinsic(c, "ASC",          asc,        "i")
+    AddIntrinsic(c, "LEN",          len,        "i")
+    AddIntrinsic(c, "printStr",     printStr,   "i")
+    AddIntrinsic(c, "printInt",     printInt,   "i")
+    AddIntrinsic(c, "printTab",     printTab,   "i")
+    AddIntrinsic(c, "printNL",      printNL,    "i")
+    AddIntrinsic(c, "printFlush",   printFlush, "i")
 #ifdef PROPELLER
-    AddIntrinsic(c, "IN",           "i",    FN_IN);
-    AddIntrinsic(c, "OUT",          "i",    FN_OUT);
-    AddIntrinsic(c, "HIGH",         "i",    FN_HIGH);
-    AddIntrinsic(c, "LOW",          "i",    FN_LOW);
-    AddIntrinsic(c, "TOGGLE",       "i",    FN_TOGGLE);
-    AddIntrinsic(c, "DIR",          "i",    FN_DIR);
-    AddIntrinsic(c, "GETDIR",       "i",    FN_GETDIR);
-    AddIntrinsic(c, "CNT",          "i",    FN_CNT);
-    AddIntrinsic(c, "PAUSE",        "i",    FN_PAUSE);
-    AddIntrinsic(c, "PULSEIN",      "i",    FN_PULSEIN);
-    AddIntrinsic(c, "PULSEOUT",     "i",    FN_PULSEOUT);
+    AddIntrinsic(c, "IN",           in,         "i");
+    AddIntrinsic(c, "OUT",          out,        "i");
+    AddIntrinsic(c, "HIGH",         high,       "i");
+    AddIntrinsic(c, "LOW",          low,        "i");
+    AddIntrinsic(c, "TOGGLE",       toggle,     "i");
+    AddIntrinsic(c, "DIR",          dir,        "i");
+    AddIntrinsic(c, "GETDIR",       getdir,     "i");
+    AddIntrinsic(c, "CNT",          cnt,        "i");
+    AddIntrinsic(c, "PAUSE",        pause,      "i");
+    AddIntrinsic(c, "PULSEIN",      pulsein,    "i");
+    AddIntrinsic(c, "PULSEOUT",     pulseout,   "i");
 #endif
 
     /* return the new parse context */
@@ -222,8 +224,8 @@ void StoreCode(ParseContext *c)
     c->cptr = c->codeBuf;
 }
 
-/* AddIntrinsic - add an intrinsic function to the global symbol table */
-void AddIntrinsic(ParseContext *c, char *name, char *types, int index)
+/* AddIntrinsic1 - add an intrinsic function to the global symbol table */
+void AddIntrinsic1(ParseContext *c, char *name, char *types, VMHANDLE handler)
 {
     VMHANDLE symbol, type;
     Type *typ;
@@ -248,7 +250,7 @@ void AddIntrinsic(ParseContext *c, char *name, char *types, int index)
     
     /* add a global symbol for the intrinsic function */
     symbol = AddGlobal(c, name, SC_CONSTANT, type);
-    GetSymbolPtr(symbol)->v.iValue = INTRINSIC_FLAG | index;
+    GetSymbolPtr(symbol)->v.hValue = handler;
 }
 
 /* LocalAlloc - allocate memory from the local heap */

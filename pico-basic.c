@@ -35,17 +35,17 @@ static void repl(System *sys)
     else {
         for (;;) {
             VMVALUE lineNumber = 0;
-            VMHANDLE main;
+            VMHANDLE code;
             c->getLine = TermGetLine;
             c->getLineCookie = &lineNumber;
-            if ((main = Compile(c, VMTRUE)) != NULL) {
+            if ((code = Compile(c, VMTRUE)) != NULL) {
                 Interpreter *i = (Interpreter *)sys->freeNext;
                 size_t stackSize = (sys->freeTop - sys->freeNext - sizeof(Interpreter)) / sizeof(VMVALUE);
                 if (stackSize <= 0)
                     VM_printf("insufficient memory\n");
                 else {
                     InitInterpreter(i, c->heap, stackSize);
-                    Execute(i, main);
+                    Execute(i, code);
                 }
             }
         }

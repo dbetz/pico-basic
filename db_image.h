@@ -16,45 +16,6 @@
 #define F_PC    -2
 #define F_SIZE  2
 
-/* intrinsic function flag */
-#if ALIGN_MASK == 1
-#define INTRINSIC_FLAG  0x8000
-#else
-#define INTRINSIC_FLAG  0x80000000
-#endif
-
-/* intrinsic function numbers */
-enum {
-    FN_ABS              = 0x00,
-    FN_RND,
-    FN_LEFT,
-    FN_RIGHT,
-    FN_MID,
-    FN_CHR,
-    FN_STR,
-    FN_VAL,
-    FN_ASC,
-    FN_LEN,
-    FN_printStr,
-    FN_printInt,
-    FN_printTab,
-    FN_printNL,
-    FN_printFlush,
-#ifdef PROPELLER
-    FN_IN,
-    FN_OUT,
-    FN_HIGH,
-    FN_LOW,
-    FN_TOGGLE,
-    FN_DIR,
-    FN_GETDIR,
-    FN_CNT,
-    FN_PAUSE,
-    FN_PULSEIN,
-    FN_PULSEOUT
-#endif
-};
-
 /* opcodes */
 #define OP_HALT         0x00    /* halt */
 #define OP_BRT          0x01    /* branch on true */

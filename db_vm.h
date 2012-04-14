@@ -99,10 +99,6 @@ extern FLASH_SPACE char str_abort_prefix[];
 extern FLASH_SPACE char str_program_id[];
 extern FLASH_SPACE char str_ready_for_download[];
 
-/* prototypes and variables from db_vmfcn.c */
-extern IntrinsicFcn * FLASH_SPACE Intrinsics[];
-extern int IntrinsicCount;
-
 /* prototypes from db_vmint.c */
 uint8_t *InitInterpreter(Interpreter *i, ObjHeap *heap, size_t stackSize);
 int Execute(Interpreter *i, VMHANDLE main);

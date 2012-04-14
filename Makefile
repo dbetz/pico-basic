@@ -1,4 +1,4 @@
-NAME = ebasic
+NAME = pico-basic
 
 OBJS = \
 pico-basic.o \
@@ -16,7 +16,7 @@ db_vmheap.o \
 db_vmint.o \
 osint_posix.o
 
-CFLAGS = -Os -DMAC -m32
+CFLAGS = -Wall -Os -DMAC -m32
 LDFLAGS = $(CFLAGS)
 
 $(NAME): $(OBJS)

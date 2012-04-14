@@ -12,7 +12,6 @@
 /* object types */
 typedef enum {
     ObjTypeIntegerVector,
-    ObjTypeFloatVector,
     ObjTypeStringVector,
     ObjTypeByteVector,
     ObjTypeSymbol,
@@ -46,7 +45,6 @@ typedef struct {
 /* value union */
 typedef union {
     VMVALUE iValue;
-    VMFLOAT fValue;
     VMHANDLE hValue;
 } Value;
 
@@ -71,7 +69,6 @@ typedef struct {
 typedef enum {
     TYPE_UNKNOWN,
     TYPE_INTEGER,
-    TYPE_FLOAT,
     TYPE_BYTE,
     TYPE_STRING,
     TYPE_ARRAY,
@@ -101,7 +98,6 @@ typedef struct {
 
 /* macros to get the base address of an object */
 #define GetIntegerVectorBase(h) ((VMVALUE *)GetHeapObjPtr(h))
-#define GetFloatVectorBase(h)   ((VMFLOAT *)GetHeapObjPtr(h))
 #define GetStringVectorBase(h)  ((VMHANDLE *)GetHeapObjPtr(h))
 #define GetByteVectorBase(h)    ((uint8_t *)GetHeapObjPtr(h))
 #define GetSymbolPtr(h)         ((Symbol *)GetHeapObjPtr(h))
@@ -135,7 +131,6 @@ VMHANDLE NewType(ObjHeap *heap, TypeID id);
 VMHANDLE NewCode(ObjHeap *heap, size_t size);
 VMHANDLE NewString(ObjHeap *heap, size_t size);
 VMHANDLE StoreIntegerVector(ObjHeap *heap, const VMVALUE *buf, size_t size);
-VMHANDLE StoreFloatVector(ObjHeap *heap, const VMFLOAT *buf, size_t size);
 VMHANDLE StoreStringVector(ObjHeap *heap, const VMHANDLE *buf, size_t size);
 VMHANDLE StoreByteVector(ObjHeap *heap, ObjType type, const uint8_t *buf, size_t size);
 int StoreByteVectorData(ObjHeap *heap, VMHANDLE object, const uint8_t *buf, size_t size);

@@ -16,7 +16,6 @@
 /* element sizes */
 static size_t elementSizes[] = {
     sizeof(VMVALUE),    /* ObjTypeIntegerVector */
-    sizeof(VMFLOAT),    /* ObjTypeFloatVector */
     sizeof(VMHANDLE),   /* ObjTypeStringVector */
     sizeof(uint8_t),    /* ObjTypeByteVector */
     sizeof(uint8_t),    /* ObjTypeSymbol */
@@ -29,7 +28,6 @@ static size_t elementSizes[] = {
 /* type names */
 static char *typeNames[] = {
     "IntegerVector",
-    "FloatVector",
     "StringVector",
     "ByteVector",
     "Symbol",
@@ -164,27 +162,6 @@ VMHANDLE StoreIntegerVector(ObjHeap *heap, const VMVALUE *buf, size_t size)
     
     /* copy the data into the vector object */
     p = GetIntegerVectorBase(object);
-    while (size > 0) {
-        *p++ = *buf++;
-        --size;
-    }
-    
-    /* return the object */
-    return object;
-}
-
-/* StoreFloatVector - store a float vector object */
-VMHANDLE StoreFloatVector(ObjHeap *heap, const VMFLOAT *buf, size_t size)
-{
-    VMHANDLE object;
-    VMFLOAT *p;
-
-    /* allocate a float vector object */
-    if (!(object = ObjAlloc(heap, ObjTypeFloatVector, size)))
-        return NULL;
-    
-    /* copy the data into the vector object */
-    p = GetFloatVectorBase(object);
     while (size > 0) {
         *p++ = *buf++;
         --size;
@@ -399,8 +376,6 @@ void DumpHeap(ObjHeap *heap)
         if (hdr->handle) {
             switch (hdr->type) {
             case ObjTypeIntegerVector:
-                break;
-            case ObjTypeFloatVector:
                 break;
             case ObjTypeStringVector:
                 break;

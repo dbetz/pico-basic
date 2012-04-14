@@ -63,7 +63,7 @@ void VM_putchar(int ch)
     putchar(ch);
 }
 
-#if 0
+#ifdef LOAD_SAVE
 
 int VM_opendir(const char *path, VMDIR *dir)
 {

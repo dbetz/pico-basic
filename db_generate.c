@@ -14,7 +14,6 @@ static void code_call(ParseContext *c, ParseTreeNode *expr, PVAL *pv);
 static void code_index(ParseContext *c, PValOp fcn, PVAL *pv);
 static VMVALUE rd_cword(ParseContext *c, VMUVALUE off);
 static void wr_cword(ParseContext *c, VMUVALUE off, VMVALUE w);
-static void wr_cfloat(ParseContext *c, VMUVALUE off, VMFLOAT f);
 
 /* code_lvalue - generate code for an l-value expression */
 void code_lvalue(ParseContext *c, ParseTreeNode *expr, PVAL *pv)
@@ -48,8 +47,6 @@ static void code_expr(ParseContext *c, ParseTreeNode *expr, PVAL *pv)
         putcbyte(c, OP_LIT);
         putcword(c, expr->u.integerLit.value);
         pv->fcn = NULL;
-        break;
-    case NodeTypeFloatLit:
         break;
     case NodeTypeFunctionLit:
         putcbyte(c, OP_LIT);
@@ -222,16 +219,6 @@ int putcword(ParseContext *c, VMVALUE w)
     return addr;
 }
 
-int putcfloat(ParseContext *c, VMFLOAT f)
-{
-    int addr = codeaddr(c);
-    if (c->cptr + sizeof(VMFLOAT) > c->ctop)
-        Fatal(c, "Bytecode buffer overflow");
-    wr_cfloat(c, (VMUVALUE)(c->cptr - c->codeBuf), f);
-    c->cptr += sizeof(VMFLOAT);
-    return addr;
-}
-
 /* rd_cword - get a code word from the code buffer */
 static VMVALUE rd_cword(ParseContext *c, VMUVALUE off)
 {
@@ -254,19 +241,6 @@ static void wr_cword(ParseContext *c, VMUVALUE off, VMVALUE v)
         uint8_t bytes[sizeof(VMVALUE)];
     } u;
     u.value = v;
-    for (i = 0; i < sizeof(u.bytes); ++i)
-       c->codeBuf[off++] = u.bytes[i];
-}
-
-/* wr_cfloat - put a float into the code buffer */
-static void wr_cfloat(ParseContext *c, VMUVALUE off, VMFLOAT f)
-{
-    int i;
-    union {
-        VMFLOAT value;
-        uint8_t bytes[sizeof(VMFLOAT)];
-    } u;
-    u.value = f;
     for (i = 0; i < sizeof(u.bytes); ++i)
        c->codeBuf[off++] = u.bytes[i];
 }

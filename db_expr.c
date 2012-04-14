@@ -1,6 +1,6 @@
 /* db_expr.c - expression parser
  *
- * Copyright (c) 2009 by David Michael Betz.  All rights reserved.
+ * Copyright (c) 2009-2012 by David Michael Betz.  All rights reserved.
  *
  */
 
@@ -545,11 +545,7 @@ VMHANDLE DefaultType(ParseContext *c, const char *name)
     case '$':
         type = CommonType(c, stringType);
         break;
-    case '%':
-        type = CommonType(c, integerType);
-        break;
     default:
-        //type = CommonType(c, floatType);
         type = CommonType(c, integerType);
         break;
     }
@@ -561,10 +557,3 @@ int IsIntegerLit(ParseTreeNode *node)
 {
     return node->nodeType == NodeTypeIntegerLit;
 }
-
-/* IsFloatLit - check to see if a node is an float literal */
-int IsFloatLit(ParseTreeNode *node)
-{
-    return node->nodeType == NodeTypeFloatLit;
-}
-

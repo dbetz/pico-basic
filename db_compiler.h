@@ -167,8 +167,6 @@ typedef struct {
     ConstantType integerArrayType;  /* parse - integer array type */
     ConstantType byteType;          /* parse - byte type */
     ConstantType byteArrayType;     /* parse - byte array type */
-    ConstantType floatType;         /* parse - float type */
-    ConstantType floatArrayType;    /* parse - float array type */
     ConstantType stringType;        /* parse - string type */
     ConstantType stringArrayType;   /* parse - string array type */
     ObjHeap *heap;                  /* heap */
@@ -186,7 +184,6 @@ struct PVAL {
     void (*fcn)(ParseContext *c, PValOp op, PVAL *pv);
     union {
         VMVALUE iValue;
-        VMFLOAT fValue;
         VMHANDLE hValue;
     } u;
 };
@@ -196,7 +193,6 @@ typedef enum {
     NodeTypeSymbolRef,
     NodeTypeStringLit,
     NodeTypeIntegerLit,
-    NodeTypeFloatLit,
     NodeTypeFunctionLit,
     NodeTypeUnaryOp,
     NodeTypeBinaryOp,
@@ -234,9 +230,6 @@ struct ParseTreeNode {
         struct {
             VMVALUE value;
         } integerLit;
-        struct {
-            VMFLOAT value;
-        } floatLit;
         struct {
             int offset;
         } functionLit;
@@ -285,7 +278,6 @@ ParseTreeNode *ParsePrimary(ParseContext *c);
 ParseTreeNode *GetSymbolRef(ParseContext *c, char *name);
 VMHANDLE DefaultType(ParseContext *c, const char *name);
 int IsIntegerLit(ParseTreeNode *node);
-int IsFloatLit(ParseTreeNode *node);
 
 /* db_scan.c */
 int GetLine(ParseContext *c);
@@ -319,7 +311,6 @@ void code_local(ParseContext *c, PValOp fcn, PVAL *pv);
 int codeaddr(ParseContext *c);
 int putcbyte(ParseContext *c, int b);
 int putcword(ParseContext *c, VMVALUE w);
-int putcfloat(ParseContext *c, VMFLOAT w);
 int merge(ParseContext *c, VMUVALUE chn, VMUVALUE chn2);
 void fixup(ParseContext *c, VMUVALUE chn, VMUVALUE val);
 void fixupbranch(ParseContext *c, VMUVALUE chn, VMUVALUE val);

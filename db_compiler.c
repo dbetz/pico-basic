@@ -37,9 +37,6 @@ ParseContext *InitCompiler(System *sys, int maxObjects)
     InitCommonType(c, byteType, TYPE_BYTE);
     InitCommonType(c, byteArrayType, TYPE_ARRAY);
     c->byteArrayType.type.u.arrayInfo.elementType = CommonType(c, byteType);
-    InitCommonType(c, floatType, TYPE_FLOAT);
-    InitCommonType(c, floatArrayType, TYPE_ARRAY);
-    c->floatArrayType.type.u.arrayInfo.elementType = CommonType(c, floatType);
     InitCommonType(c, stringType,TYPE_STRING);
     InitCommonType(c, stringArrayType, TYPE_ARRAY);
     c->stringArrayType.type.u.arrayInfo.elementType = CommonType(c, stringType);

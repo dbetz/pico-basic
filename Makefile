@@ -1,7 +1,7 @@
 NAME = ebasic
 
 OBJS = \
-ebasic.o \
+pico-basic.o \
 db_compiler.o \
 db_expr.o \
 db_generate.o \

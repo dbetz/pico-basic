@@ -1,9 +1,9 @@
-NAME = ebasic
+NAME = pico-basic
 
 CHIP = 24HJ256GP206
 
 OBJS = \
-ebasic.o \
+pico-basic.o \
 db_compiler.o \
 db_expr.o \
 db_generate.o \
@@ -24,7 +24,7 @@ simple_vsnprintf.o
 CFLAGS = -Os -DXGSPIC -mcpu=$(CHIP) -omf=elf -I..
 LDFLAGS = $(CFLAGS) -Wl,--heap=4,-Map=$(NAME).map,--report-mem,-Tp$(CHIP).gld
 
-VPATH = ..
+vpath %.c ..
 
 # basic gnu tools
 CC = pic30-gcc

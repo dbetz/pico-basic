@@ -1,9 +1,9 @@
-NAME = ebasic
+NAME = pico-basic
 
-VPATH = ..
+vpath %.c ..
 
 OBJS = \
-ebasic.o \
+pico-basic.o \
 db_compiler.o \
 db_expr.o \
 db_generate.o \
@@ -22,6 +22,6 @@ ifndef MODEL
 MODEL = xmmc
 endif
 
-CFLAGS = -Os -DPROPELLER_GCC -DUSE_FDS -DLOAD_SAVE
+CFLAGS = -Os -I.. -DPROPELLER_GCC -DUSE_FDS -DLOAD_SAVE
 
 include common.mk

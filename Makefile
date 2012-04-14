@@ -16,7 +16,7 @@ db_vmheap.o \
 db_vmint.o \
 osint_posix.o
 
-CFLAGS = -Os -DLINUX
+CFLAGS = -Os -DMAC -m32
 LDFLAGS = $(CFLAGS)
 
 $(NAME): $(OBJS)

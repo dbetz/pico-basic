@@ -33,6 +33,7 @@ static void repl(System *sys)
     if (!(c = InitCompiler(sys, MAXOBJECTS)))
         VM_printf("insufficient memory\n");
     else {
+        AddIntrinsic(c, "DUMP",          dump,        "i")
         for (;;) {
             VMVALUE lineNumber = 0;
             VMHANDLE code;
@@ -51,3 +52,9 @@ static void repl(System *sys)
         }
     }
 }
+
+static void fcn_dump(Interpreter *i)
+{
+    DumpHeap(i->heap);
+}
+

@@ -1,6 +1,6 @@
 /* db_types.h - type definitions for a simple virtual machine
  *
- * Copyright (c) 2009 by David Michael Betz.  All rights reserved.
+ * Copyright (c) 2009-2012 by David Michael Betz.  All rights reserved.
  *
  */
 

@@ -97,18 +97,18 @@ typedef struct {
     Type type;
 } ConstantType;
 
-typedef void IntrinsicHandler(void *i);
+typedef void IntrinsicHandler(Interpreter *i);
 
 /* structure used to construct intrinsic function objects */
 typedef struct {
     void *data; // this should point to the type field
     ObjHdr hdr; // this should contain a NULL handle
-    void (*handler)(void *i);
+    IntrinsicHandler *handler;
 } IntrinsicFunction;
 
 /* initialize a common type field */
 #define DefIntrinsic(name)                                                      \
-            void fcn_##name(void *i);                                           \
+            IntrinsicHandler fcn_##name;                                        \
             static IntrinsicFunction name##_struct = {                          \
                             NULL,                           /* data */          \
                             {                                                   \

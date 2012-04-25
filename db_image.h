@@ -7,10 +7,6 @@
 #ifndef __DB_IMAGE_H__
 #define __DB_IMAGE_H__
 
-#include <stdarg.h>
-#include "db_types.h"
-#include "db_vmheap.h"
-
 /* stack frame offsets */
 #define F_FP    -1
 #define F_PC    -2

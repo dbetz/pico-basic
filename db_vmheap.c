@@ -5,9 +5,8 @@
  */
 
 #include <string.h>
-#include "db_vmheap.h"
+#include "db_vm.h"
 #include "db_vmdebug.h"
-#include "db_image.h"
 
 /* round to multiple of the word size */
 #define WORDMASK        (sizeof(VMVALUE) - 1)
@@ -324,6 +323,21 @@ void ObjRelease(ObjHeap *heap, VMHANDLE handle)
         *handle = (void *)heap->freeHandles;
         heap->freeHandles = handle;
         // BUG!!! Need to decrement the reference counts of any embedded handle references
+        switch (hdr->type) {
+        case ObjTypeStringVector:
+            break;
+        case ObjTypeSymbol:
+            break;
+        case ObjTypeLocal:
+            break;
+        case ObjTypeType:
+            break;
+        case ObjTypeCode:
+            break;
+        default:
+            // no internal references
+            break;
+        }
     }
 }
 

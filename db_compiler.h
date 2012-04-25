@@ -12,7 +12,7 @@
 #include "db_types.h"
 #include "db_image.h"
 #include "db_system.h"
-#include "db_vmheap.h"
+#include "db_vm.h"
 
 #ifdef WIN32
 #define strcasecmp  _stricmp
@@ -136,7 +136,6 @@ typedef enum {
 /* add an intrinsic function to the symbol table */
 #define AddIntrinsic(c, name, id, types)                            \
             {                                                       \
-                DefIntrinsic(id);                                   \
                 id##_struct.data = (void *)&id##_struct.handler;    \
                 AddIntrinsic1(c, name, types, IntrinsicHandle(id)); \
             }

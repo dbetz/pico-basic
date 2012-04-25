@@ -4,6 +4,8 @@
 
 static DATA_SPACE uint8_t space[HEAPSIZE];
 
+DefIntrinsic(dump);
+
 static void repl(System *sys);
 
 int main(int argc, char *argv[])
@@ -53,7 +55,7 @@ static void repl(System *sys)
     }
 }
 
-static void fcn_dump(Interpreter *i)
+void fcn_dump(Interpreter *i)
 {
     DumpHeap(i->heap);
 }

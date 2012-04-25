@@ -10,13 +10,14 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <setjmp.h>
+#include "db_types.h"
 #include "db_image.h"
 
 /* forward type declarations */
 typedef struct Interpreter Interpreter;
 
-/* intrinsic function handler type */
-typedef void IntrinsicFcn(Interpreter *i);
+/* must be after the typedef for Interpreter */
+#include "db_vmheap.h"
 
 /* interpreter state structure */
 struct Interpreter {

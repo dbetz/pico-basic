@@ -16,6 +16,36 @@
 
 static DATA_SPACE uint8_t heap_space[4096];
 
+DefIntrinsic(abs);
+DefIntrinsic(rnd);
+DefIntrinsic(left);
+DefIntrinsic(right);
+DefIntrinsic(mid);
+DefIntrinsic(chr);
+DefIntrinsic(str);
+DefIntrinsic(val);
+DefIntrinsic(asc);
+DefIntrinsic(len);
+DefIntrinsic(printStr);
+DefIntrinsic(printInt);
+DefIntrinsic(printTab);
+DefIntrinsic(printNL);
+DefIntrinsic(printFlush);
+
+#ifdef PROPELLER
+DefIntrinsic(in);
+DefIntrinsic(out);
+DefIntrinsic(high);
+DefIntrinsic(low);
+DefIntrinsic(toggle);
+DefIntrinsic(dir);
+DefIntrinsic(getdir);
+DefIntrinsic(cnt);
+DefIntrinsic(pause);
+DefIntrinsic(pulsein);
+DefIntrinsic(pulseout);
+#endif
+
 /* InitCompiler - initialize the compiler and create a parse context */
 ParseContext *InitCompiler(System *sys, int maxObjects)
 {

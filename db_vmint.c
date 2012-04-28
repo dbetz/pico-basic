@@ -11,32 +11,6 @@
 #include <ctype.h>
 #include "db_vm.h"
 
-#if ALIGN_MASK == 1
-#define VMVALUE_to_tmp                                      \
-            tmp =  VMCODEBYTE(i->pc++);                     \
-            tmp |= (VMVALUE)(VMCODEBYTE(i->pc++) << 8)
-#else
-#define VMVALUE_to_tmp                                      \
-            tmp =  VMCODEBYTE(i->pc++);                     \
-            tmp |= (VMVALUE)(VMCODEBYTE(i->pc++) << 8);     \
-            tmp |= (VMVALUE)(VMCODEBYTE(i->pc++) << 16);    \
-            tmp |= (VMVALUE)(VMCODEBYTE(i->pc++) << 24)
-#endif
-
-#if ALIGN_MASK == 1
-#define get_VMVALUE(var, type)                              \
-            tmp =  VMCODEBYTE(i->pc++);                     \
-            tmp |= (VMVALUE)(VMCODEBYTE(i->pc++) << 8);     \
-            var = (type)tmp
-#else
-#define get_VMVALUE(var, type)                              \
-            tmp =  VMCODEBYTE(i->pc++);                     \
-            tmp |= (VMVALUE)(VMCODEBYTE(i->pc++) << 8);     \
-            tmp |= (VMVALUE)(VMCODEBYTE(i->pc++) << 16);    \
-            tmp |= (VMVALUE)(VMCODEBYTE(i->pc++) << 24);    \
-            var = (type)tmp
-#endif
-
 /* prototypes for local functions */
 static void StartCode(Interpreter *i, VMHANDLE object);
 static void StringCat(Interpreter *i);
@@ -73,31 +47,31 @@ int Execute(Interpreter *i, VMHANDLE main)
         case OP_HALT:
             return VMTRUE;
         case OP_BRT:
-            VMVALUE_to_tmp;
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             if (Pop(i))
                 i->pc += tmp;
             break;
         case OP_BRTSC:
-            VMVALUE_to_tmp;
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             if (*i->sp)
                 i->pc += tmp;
             else
                 Drop(i, 1);
             break;
         case OP_BRF:
-            VMVALUE_to_tmp;
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             if (!Pop(i))
                 i->pc += tmp;
             break;
         case OP_BRFSC:
-            VMVALUE_to_tmp;
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             if (!*i->sp)
                 i->pc += tmp;
             else
                 Drop(i, 1);
             break;
         case OP_BR:
-            VMVALUE_to_tmp;
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             i->pc += tmp;
             break;
         case OP_NOT:
@@ -178,15 +152,17 @@ int Execute(Interpreter *i, VMHANDLE main)
             break;
         case OP_LIT:
         case OP_LITH:
-            VMVALUE_to_tmp;
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             CPush(i, tmp);
             break;
         case OP_GREF:
-            get_VMVALUE(obj, VMHANDLE);
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
+            obj = (VMHANDLE)tmp;
             CPush(i, GetSymbolPtr(obj)->v.iValue);
             break;
         case OP_GSET:
-            get_VMVALUE(obj, VMHANDLE);
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
+            obj = (VMHANDLE)tmp;
             GetSymbolPtr(obj)->v.iValue = Pop(i);
             break;
         case OP_LREF:

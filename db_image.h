@@ -53,6 +53,20 @@
 #define OP_LITH         0x40    /* literal handle */
 #define OP_CAT          0x41    /* concatenate two strings */
 
+#if ALIGN_MASK == 1
+#define get_VMVALUE(var, getbyte)               \
+            var =  (VMVALUE) (getbyte);         \
+            var |= (VMVALUE)((getbyte) << 8);
+#elif ALIGN_MASK == 3
+#define get_VMVALUE(var, getbyte)               \
+            var =  (VMVALUE) (getbyte);         \
+            var |= (VMVALUE)((getbyte) << 8);   \
+            var |= (VMVALUE)((getbyte) << 16);  \
+            var |= (VMVALUE)((getbyte) << 24);
+#else
+#error Only 16 bit and 32 bit alignment is currently supported.
+#endif
+
 void VM_printf(const char *fmt, ...);
 void VM_putchar(int ch);
 

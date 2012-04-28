@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include "db_vm.h"
+#include "db_image.h"
 #include "db_vmdebug.h"
 
 /* round to multiple of the word size */
@@ -37,6 +38,10 @@ static char *typeNames[] = {
     "Code",
     "Intrinsic"
 };
+
+/* local functions */
+static VMHANDLE DereferenceAndMaybePushObject(VMHANDLE stack, VMHANDLE object);
+static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size);
 
 /* InitHeap - initialize a heap */
 ObjHeap *InitHeap(uint8_t *data, size_t size, int nHandles)
@@ -314,31 +319,153 @@ int ObjRealloc(ObjHeap *heap, VMHANDLE handle, size_t size)
     return VMTRUE;
 }
 
+/*
+    VMHANDLE handle;
+    VMUVALUE refCnt;
+*/
+
 /* ObjRelease - release a reference to an object */
-void ObjRelease(ObjHeap *heap, VMHANDLE handle)
+void ObjRelease(ObjHeap *heap, VMHANDLE object)
 {
-    ObjHdr *hdr = GetHeapObjHdr(handle);
-    if (--hdr->refCnt == 0 && hdr->handle) {
+    VMHANDLE stack = DereferenceAndMaybePushObject(NULL, object);
+    
+    /* trace objects until the stack is empty */
+    while ((object = stack) != NULL) {
+        ObjHdr *hdr = GetHeapObjHdr(object);
+        
+        /* pop the stack */
+        stack = hdr->handle;
+    
+        /* free the object */
         hdr->handle = NULL;
-        *handle = (void *)heap->freeHandles;
-        heap->freeHandles = handle;
-        // BUG!!! Need to decrement the reference counts of any embedded handle references
+        *object = (void *)heap->freeHandles;
+        heap->freeHandles = object;
+        
+        /* push any embedded object references */
         switch (hdr->type) {
         case ObjTypeStringVector:
+        {
+            VMHANDLE *base = GetStringVectorBase(object);
+            size_t i;
+            for (i = 0; i < hdr->size; ++i)
+                stack = DereferenceAndMaybePushObject(stack, base[i]);
             break;
+        }
         case ObjTypeSymbol:
+        {
+            Symbol *symbol = GetSymbolPtr(object);
+            stack = DereferenceAndMaybePushObject(stack, symbol->next);
+            stack = DereferenceAndMaybePushObject(stack, symbol->type);
+            // BUG: need to deal with the symbol value
             break;
+        }
         case ObjTypeLocal:
+        {
+            Local *local = GetLocalPtr(object);
+            stack = DereferenceAndMaybePushObject(stack, local->next);
+            stack = DereferenceAndMaybePushObject(stack, local->type);
             break;
+        }
         case ObjTypeType:
+        {
+            //Type *type = GetTypePtr(object);
+            // BUG: need to trace fields
             break;
+        }
         case ObjTypeCode:
+            stack = TraceCode(stack, GetCodePtr(object), hdr->size);
             break;
-        default:
-            // no internal references
+        default:    /* no internal references */
+            /* should never get here */
             break;
         }
     }
+}
+
+/* DereferenceAndMaybePushObject - dereference an object and push it onto the trace stack if refCnt goes to zero */
+static VMHANDLE DereferenceAndMaybePushObject(VMHANDLE stack, VMHANDLE object)
+{
+    if (object != NULL) {
+        ObjHdr *hdr = GetHeapObjHdr(object);
+        if (hdr->handle && --hdr->refCnt == 0) {
+            hdr->handle = stack;
+            stack = object;
+        }
+    }
+    return stack;
+}
+
+/* TraceCode - trace object references in a code object */
+static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size)
+{
+    uint8_t *p = code;
+    uint8_t *end = p + size;
+    while (p < end) {
+        switch (*p++) {
+        case OP_HALT:
+            break;
+        case OP_BRT:
+        case OP_BRTSC:
+        case OP_BRF:
+        case OP_BRFSC:
+        case OP_BR:
+            p += sizeof(VMVALUE);
+            break;
+        case OP_NOT:
+        case OP_NEG:
+        case OP_ADD:
+        case OP_SUB:
+        case OP_MUL:
+        case OP_DIV:
+        case OP_REM:
+        case OP_BNOT:
+        case OP_BAND:
+        case OP_BOR:
+        case OP_BXOR:
+        case OP_SHL:
+        case OP_SHR:
+        case OP_LT:
+        case OP_LE:
+        case OP_EQ:
+        case OP_NE:
+        case OP_GE:
+        case OP_GT:
+            break;
+        case OP_LIT:
+        case OP_GREF:
+        case OP_GSET:
+            p += sizeof(VMVALUE);
+            break;
+        case OP_LREF:
+        case OP_LSET:
+            p += 1;
+            break;
+        case OP_VREF:
+        case OP_VSET:
+            break;
+        case OP_RESERVE:
+        case OP_CALL:
+            p += 1;
+            break;
+        case OP_RETURN:
+        case OP_DROP:
+            break;
+        case OP_LITH:
+        {
+            VMVALUE tmp;
+            get_VMVALUE(tmp, *p++);
+            stack = DereferenceAndMaybePushObject(stack, (VMHANDLE)tmp);
+            break;
+        }
+        case OP_CAT:
+            break;
+        default:
+            /* should never reach */
+            break;
+        }
+    }
+    
+    return stack;
 }
 
 /* CompactHeap - compact the heap */

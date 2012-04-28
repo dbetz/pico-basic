@@ -77,7 +77,7 @@ typedef uint32_t VMUVALUE;
 typedef double VMFLOAT;
 typedef void **VMHANDLE;
 
-#define ALIGN_MASK              7
+#define ALIGN_MASK              3
 
 #define FLASH_SPACE
 #define DATA_SPACE

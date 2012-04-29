@@ -40,6 +40,7 @@ static char *typeNames[] = {
 };
 
 /* local functions */
+static void ObjRelease1(ObjHeap *heap, VMHANDLE stack);
 static VMHANDLE DereferenceAndMaybePushObject(VMHANDLE stack, VMHANDLE object);
 static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size);
 
@@ -319,15 +320,22 @@ int ObjRealloc(ObjHeap *heap, VMHANDLE handle, size_t size)
     return VMTRUE;
 }
 
-/*
-    VMHANDLE handle;
-    VMUVALUE refCnt;
-*/
-
 /* ObjRelease - release a reference to an object */
 void ObjRelease(ObjHeap *heap, VMHANDLE object)
 {
-    VMHANDLE stack = DereferenceAndMaybePushObject(NULL, object);
+    ObjRelease1(heap, DereferenceAndMaybePushObject(NULL, object));
+}
+
+/* ReleaseCode - release references in a block of code */
+void ReleaseCode(ObjHeap *heap, uint8_t *code, size_t size)
+{
+    ObjRelease1(heap, TraceCode(NULL, code, size));
+}
+    
+/* ObjRelease1 - release a reference to an object */
+static void ObjRelease1(ObjHeap *heap, VMHANDLE stack)
+{
+    VMHANDLE object;
     
     /* trace objects until the stack is empty */
     while ((object = stack) != NULL) {

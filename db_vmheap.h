@@ -165,6 +165,7 @@ int StoreByteVectorData(ObjHeap *heap, VMHANDLE object, const uint8_t *buf, size
 VMHANDLE ObjAlloc(ObjHeap *heap, ObjType type, size_t size);
 int ObjRealloc(ObjHeap *heap, VMHANDLE handle, size_t size);
 void ObjRelease(ObjHeap *heap, VMHANDLE handle);
+void ReleaseCode(ObjHeap *heap, uint8_t *code, size_t size);
 void CompactHeap(ObjHeap *heap);
 void DumpHeap(ObjHeap *heap);
 

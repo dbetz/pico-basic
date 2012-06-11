@@ -32,20 +32,6 @@ DefIntrinsic(printTab);
 DefIntrinsic(printNL);
 DefIntrinsic(printFlush);
 
-#ifdef PROPELLER
-DefIntrinsic(in);
-DefIntrinsic(out);
-DefIntrinsic(high);
-DefIntrinsic(low);
-DefIntrinsic(toggle);
-DefIntrinsic(dir);
-DefIntrinsic(getdir);
-DefIntrinsic(cnt);
-DefIntrinsic(pause);
-DefIntrinsic(pulsein);
-DefIntrinsic(pulseout);
-#endif
-
 /* InitCompiler - initialize the compiler and create a parse context */
 ParseContext *InitCompiler(System *sys, int maxObjects)
 {
@@ -77,34 +63,21 @@ ParseContext *InitCompiler(System *sys, int maxObjects)
     InitSymbolTable(&c->globals);
 
     /* add the intrinsic functions */
-    AddIntrinsic(c, "ABS",          abs,        "i")
-    AddIntrinsic(c, "RND",          rnd,        "i")
-    AddIntrinsic(c, "LEFT$",        left,       "s")
-    AddIntrinsic(c, "RIGHT$",       right,      "s")
-    AddIntrinsic(c, "MID$",         mid,        "s")
-    AddIntrinsic(c, "CHR$",         chr,        "s")
-    AddIntrinsic(c, "STR$",         str,        "s")
-    AddIntrinsic(c, "VAL",          val,        "i")
-    AddIntrinsic(c, "ASC",          asc,        "i")
-    AddIntrinsic(c, "LEN",          len,        "i")
-    AddIntrinsic(c, "printStr",     printStr,   "i")
-    AddIntrinsic(c, "printInt",     printInt,   "i")
+    AddIntrinsic(c, "ABS",          abs,        "i=i")
+    AddIntrinsic(c, "RND",          rnd,        "i=i")
+    AddIntrinsic(c, "LEFT$",        left,       "s=si")
+    AddIntrinsic(c, "RIGHT$",       right,      "s=si")
+    AddIntrinsic(c, "MID$",         mid,        "s=sii")
+    AddIntrinsic(c, "CHR$",         chr,        "s=i")
+    AddIntrinsic(c, "STR$",         str,        "s=i")
+    AddIntrinsic(c, "VAL",          val,        "i=s")
+    AddIntrinsic(c, "ASC",          asc,        "i=s")
+    AddIntrinsic(c, "LEN",          len,        "i=s")
+    AddIntrinsic(c, "printStr",     printStr,   "is")
+    AddIntrinsic(c, "printInt",     printInt,   "ii")
     AddIntrinsic(c, "printTab",     printTab,   "i")
     AddIntrinsic(c, "printNL",      printNL,    "i")
     AddIntrinsic(c, "printFlush",   printFlush, "i")
-#ifdef PROPELLER
-    AddIntrinsic(c, "IN",           in,         "i");
-    AddIntrinsic(c, "OUT",          out,        "i");
-    AddIntrinsic(c, "HIGH",         high,       "i");
-    AddIntrinsic(c, "LOW",          low,        "i");
-    AddIntrinsic(c, "TOGGLE",       toggle,     "i");
-    AddIntrinsic(c, "DIR",          dir,        "i");
-    AddIntrinsic(c, "GETDIR",       getdir,     "i");
-    AddIntrinsic(c, "CNT",          cnt,        "i");
-    AddIntrinsic(c, "PAUSE",        pause,      "i");
-    AddIntrinsic(c, "PULSEIN",      pulsein,    "i");
-    AddIntrinsic(c, "PULSEOUT",     pulseout,   "i");
-#endif
 
     /* return the new parse context */
     return c;
@@ -167,6 +140,7 @@ VMHANDLE Compile(ParseContext *c, int oneStatement)
     putcbyte(c, OP_HALT);
     
     /* write the main code */
+    InitSymbolTable(&c->arguments);
     StartCode(c, "main", CODE_TYPE_MAIN);
     StoreCode(c);
 
@@ -177,28 +151,29 @@ VMHANDLE Compile(ParseContext *c, int oneStatement)
     return c->code;
 }
 
-/* StartCode - start a function or method under construction */
+/* StartCode - start a function under construction */
 void StartCode(ParseContext *c, char *name, CodeType type)
 {
-    /* all methods must precede the main code */
+    /* all functions must precede or follow the main code */
     if (type != CODE_TYPE_MAIN && c->cptr > c->codeBuf)
-        ParseError(c, "subroutines and functions must precede the main code", NULL);
+        ParseError(c, "functions must precede or follow the main code", NULL);
 
-    /* don't allow nested functions or subroutines (for now anyway) */
+    /* don't allow nested functions (for now anyway) */
     if (type != CODE_TYPE_MAIN && c->codeType != CODE_TYPE_MAIN)
-        ParseError(c, "nested subroutines and functions are not supported", NULL);
+        ParseError(c, "nested functions are not supported", NULL);
 
     /* initialize the code object under construction */
     c->codeName = name;
-    InitSymbolTable(&c->arguments);
     InitSymbolTable(&c->locals);
     c->code = NewCode(c->heap, 0);
-    c->localOffset = 0;
+    c->localOffset = -F_SIZE - 1;
+    c->handleLocalOffset = 1;
     c->codeType = type;
     
     /* write the code prolog */
     if (type != CODE_TYPE_MAIN) {
         putcbyte(c, OP_RESERVE);
+        putcbyte(c, 0);
         putcbyte(c, 0);
     }
 }
@@ -223,7 +198,15 @@ void StoreCode(ParseContext *c)
 
     /* fixup the RESERVE instruction at the start of the code */
     if (c->codeType != CODE_TYPE_MAIN) {
-        c->codeBuf[1] = c->localOffset;
+        c->codeBuf[1] = (-F_SIZE - 1) - c->localOffset;
+        c->codeBuf[2] = c->handleLocalOffset - 1;
+        printf("fixups %08x, codeaddr %08x\n", c->returnFixups, codeaddr(c));
+        if (c->returnFixups == codeaddr(c) - sizeof(VMVALUE)) {
+            c->returnFixups = rd_cword(c, c->returnFixups);
+            printf("fixups %08x\n", c->returnFixups);
+            c->cptr -= sizeof(VMVALUE) + 1;
+        }
+        fixupbranch(c, c->returnFixups, codeaddr(c));
         putcbyte(c, OP_RETURN);
     }
 
@@ -233,7 +216,7 @@ void StoreCode(ParseContext *c)
     /* determine the code size */
     codeSize = (int)(c->cptr - c->codeBuf);
 
-#if 0
+#if 1
     VM_printf("%s:\n", c->codeName);
     DecodeFunction(0, c->codeBuf, codeSize);
     DumpLocals(c);
@@ -257,13 +240,13 @@ void StoreCode(ParseContext *c)
 /* AddIntrinsic1 - add an intrinsic function to the global symbol table */
 void AddIntrinsic1(ParseContext *c, char *name, char *types, VMHANDLE handler)
 {
-    VMHANDLE symbol, type;
+    VMHANDLE symbol, type, argType;
     Type *typ;
     
     /* make the function type */
     type = NewType(c->heap, TYPE_FUNCTION);
     typ = GetTypePtr(type);
-    InitSymbolTable(&typ->u.functionInfo.arguments);
+    InitSymbolTable(&c->arguments);
     
     /* set the return type */
     switch (*types++) {
@@ -278,9 +261,31 @@ void AddIntrinsic1(ParseContext *c, char *name, char *types, VMHANDLE handler)
         break;
     }
     
+    /* add the argument types */
+    if (*types++ == '=') {
+        while (*types) {
+            switch (*types++) {
+            case 'i':
+                argType = CommonType(c, integerType);
+                break;
+            case 's':
+                argType = CommonType(c, stringType);
+                break;
+            default:
+                Fatal(c, "unknown argument type");
+                break;
+            }
+            AddArgument(c, "", argType, 0);
+        }
+    }
+
     /* add a global symbol for the intrinsic function */
     symbol = AddGlobal(c, name, SC_CONSTANT, type);
     GetSymbolPtr(symbol)->v.hValue = handler;
+
+    /* store the argument symbol table */
+    typ = GetTypePtr(type);
+    typ->u.functionInfo.arguments = c->arguments;
 }
 
 /* LocalAlloc - allocate memory from the local heap */

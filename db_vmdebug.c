@@ -12,8 +12,9 @@
 /* instruction output formats */
 #define FMT_NONE        0
 #define FMT_BYTE        1
-#define FMT_WORD        2
-#define FMT_BR          3
+#define FMT_2BYTES      2
+#define FMT_WORD        3
+#define FMT_BR          4
 
 typedef struct {
     int code;
@@ -48,14 +49,20 @@ static FLASH_SPACE OTDEF otab[] = {
 { OP_GE,        "GE",       FMT_NONE    },
 { OP_GT,        "GT",       FMT_NONE    },
 { OP_LIT,       "LIT",      FMT_WORD    },
-{ OP_LITH,      "LITH",     FMT_WORD    },
 { OP_GREF,      "GREF",     FMT_WORD    },
 { OP_GSET,      "GSET",     FMT_WORD    },
 { OP_LREF,      "LREF",     FMT_BYTE    },
 { OP_LSET,      "LSET",     FMT_BYTE    },
 { OP_VREF,      "VREF",     FMT_NONE    },
 { OP_VSET,      "VSET",     FMT_NONE    },
-{ OP_RESERVE,   "RESERVE",  FMT_BYTE    },
+{ OP_LITH,      "LITH",     FMT_WORD    },
+{ OP_GREFH,     "GREFH",    FMT_WORD    },
+{ OP_GSETH,     "GSETH",    FMT_WORD    },
+{ OP_LREFH,     "LREFH",    FMT_BYTE    },
+{ OP_LSETH,     "LSETH",    FMT_BYTE    },
+{ OP_VREFH,     "VREFH",    FMT_NONE    },
+{ OP_VSETH,     "VSETH",    FMT_NONE    },
+{ OP_RESERVE,   "RESERVE",  FMT_2BYTES  },
 { OP_CALL,      "CALL",     FMT_BYTE    },
 { OP_RETURN,    "RETURN",   FMT_NONE    },
 { OP_DROP,      "DROP",     FMT_NONE    },
@@ -75,6 +82,7 @@ void DecodeFunction(VMUVALUE base, const uint8_t *code, int len)
 int DecodeInstruction(VMUVALUE base, const uint8_t *code, const uint8_t *lc)
 {
     uint8_t opcode, bytes[sizeof(VMVALUE)];
+    const uint8_t *p;
     const OTDEF *op;
     VMVALUE offset;
     int n, addr, i;
@@ -104,25 +112,35 @@ int DecodeInstruction(VMUVALUE base, const uint8_t *code, const uint8_t *lc)
                 VM_printf("%s %02x\n", op->name, bytes[0]);
                 n += 1;
                 break;
+            case FMT_2BYTES:
+                bytes[0] = VMCODEBYTE(lc + 1);
+                bytes[1] = VMCODEBYTE(lc + 2);
+                VM_printf("%02x %02x ", bytes[0], bytes[1]);
+                for (i = 2; i < sizeof(VMVALUE); ++i)
+                    VM_printf("   ");
+                VM_printf("%s %02x %02x\n", op->name, bytes[0], bytes[1]);
+                n += 2;
+                break;
             case FMT_WORD:
                 for (i = 0; i < sizeof(VMVALUE); ++i) {
                     bytes[i] = VMCODEBYTE(lc + i + 1);
                     VM_printf("%02x ", bytes[i]);
                 }
                 VM_printf("%s ", op->name);
-                for (i = 0; i < sizeof(VMVALUE); ++i)
-                    VM_printf("%02x", bytes[sizeof(VMVALUE) - i - 1]);
+                for (i = sizeof(VMVALUE); --i >= 0; )
+                    VM_printf("%02x", bytes[i]);
                 VM_printf("\n");
                 n += sizeof(VMVALUE);
                 break;
             case FMT_BR:
-                for (i = 0, offset = 0; i < sizeof(VMVALUE); ++i) {
+                p = lc + 1;
+                get_VMVALUE(offset, VMCODEBYTE(p++));
+                for (i = 0; i < sizeof(VMVALUE); ++i) {
                     bytes[i] = VMCODEBYTE(lc + i + 1);
-                    offset = (offset << 8) | bytes[i];
                     VM_printf("%02x ", bytes[i]);
                 }
                 VM_printf("%s ", op->name);
-                for (i = 0; i < sizeof(VMVALUE); ++i)
+                for (i = sizeof(VMVALUE); --i >= 0; )
                     VM_printf("%02x", bytes[i]);
                 VM_printf(" # %04x\n", addr + 1 + sizeof(VMVALUE) + offset);
                 n += sizeof(VMVALUE);

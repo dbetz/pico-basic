@@ -163,6 +163,8 @@ typedef struct {
     SymbolTable arguments;          /* parse - arguments of current function definition */
     SymbolTable locals;             /* parse - local variables of current function definition */
     int localOffset;                /* parse - offset to next available local variable */
+    int handleLocalOffset;          /* parse - offset to next available local handle variable */
+    int returnFixups;               /* parse - branches to the function return */
     VMHANDLE code;                  /* parse - code object under construction */
     Block blockBuf[10];             /* parse - stack of nested blocks */
     Block *bptr;                    /* parse - current block */
@@ -200,7 +202,7 @@ typedef enum {
     NodeTypeSymbolRef,
     NodeTypeStringLit,
     NodeTypeIntegerLit,
-    NodeTypeFunctionLit,
+    NodeTypeHandleLit,
     NodeTypeUnaryOp,
     NodeTypeBinaryOp,
     NodeTypeArrayRef,
@@ -238,8 +240,8 @@ struct ParseTreeNode {
             VMVALUE value;
         } integerLit;
         struct {
-            int offset;
-        } functionLit;
+            VMHANDLE handle;
+        } handleLit;
         struct {
             int op;
             ParseTreeNode *expr;
@@ -302,6 +304,8 @@ void ParseError(ParseContext *c, const char *err, ...);
 void InitSymbolTable(SymbolTable *table);
 VMHANDLE AddGlobal(ParseContext *c, const char *name, StorageClass storageClass, VMHANDLE type);
 VMHANDLE FindGlobal(ParseContext *c, const char *name);
+VMHANDLE AddArgument(ParseContext *c, const char *name, VMHANDLE type, VMVALUE offset);
+VMHANDLE FindArgument(ParseContext *c, const char *name);
 VMHANDLE AddLocal(ParseContext *c, const char *name, VMHANDLE type, VMVALUE offset);
 VMHANDLE FindLocal(ParseContext *c, const char *name);
 int IsConstant(Symbol *symbol);
@@ -318,6 +322,8 @@ void code_local(ParseContext *c, PValOp fcn, PVAL *pv);
 int codeaddr(ParseContext *c);
 int putcbyte(ParseContext *c, int b);
 int putcword(ParseContext *c, VMVALUE w);
+VMVALUE rd_cword(ParseContext *c, VMUVALUE off);
+void wr_cword(ParseContext *c, VMUVALUE off, VMVALUE v);
 int merge(ParseContext *c, VMUVALUE chn, VMUVALUE chn2);
 void fixup(ParseContext *c, VMUVALUE chn, VMUVALUE val);
 void fixupbranch(ParseContext *c, VMUVALUE chn, VMUVALUE val);

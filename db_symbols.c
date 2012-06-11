@@ -9,6 +9,9 @@
 #include <string.h>
 #include "db_compiler.h"
 
+static VMHANDLE AddLocal1(ParseContext *c, SymbolTable *table, const char *name, VMHANDLE type, VMVALUE offset);
+static VMHANDLE FindLocal1(SymbolTable *table, const char *name);
+
 /* InitSymbolTable - initialize a symbol table */
 void InitSymbolTable(SymbolTable *table)
 {
@@ -53,8 +56,32 @@ VMHANDLE FindGlobal(ParseContext *c, const char *name)
     return NULL;
 }
 
+/* AddArgument - add a symbol to an argument symbol table */
+VMHANDLE AddArgument(ParseContext *c, const char *name, VMHANDLE type, VMVALUE offset)
+{
+    return AddLocal1(c, &c->arguments, name, type, offset);
+}
+
+/* FindArgument - find an argument symbol in a symbol table */
+VMHANDLE FindArgument(ParseContext *c, const char *name)
+{
+    return FindLocal1(&c->arguments, name);
+}
+
 /* AddLocal - add a symbol to a local symbol table */
 VMHANDLE AddLocal(ParseContext *c, const char *name, VMHANDLE type, VMVALUE offset)
+{
+    return AddLocal1(c, &c->locals, name, type, offset);
+}
+
+/* FindLocal - find a local symbol in a symbol table */
+VMHANDLE FindLocal(ParseContext *c, const char *name)
+{
+    return FindLocal1(&c->locals, name);
+}
+
+/* AddLocal1 - add a symbol to a local symbol table */
+static VMHANDLE AddLocal1(ParseContext *c, SymbolTable *table, const char *name, VMHANDLE type, VMVALUE offset)
 {
     VMHANDLE local;
     
@@ -63,23 +90,23 @@ VMHANDLE AddLocal(ParseContext *c, const char *name, VMHANDLE type, VMVALUE offs
         return NULL;
         
     /* add it to the symbol table */
-    if (c->locals.tail == NULL)
-        c->locals.head = c->locals.tail = local;
+    if (table->tail == NULL)
+        table->head = table->tail = local;
     else {
-        Local *last = GetLocalPtr(c->locals.tail);
-        c->locals.tail = local;
+        Local *last = GetLocalPtr(table->tail);
+        table->tail = local;
         last->next = local;
     }
-    ++c->locals.count;
+    ++table->count;
     
     /* return the symbol */
     return local;
 }
 
-/* FindLocal - find a local symbol in a symbol table */
-VMHANDLE FindLocal(ParseContext *c, const char *name)
+/* FindLocal1 - find a local symbol in a symbol table */
+static VMHANDLE FindLocal1(SymbolTable *table, const char *name)
 {
-    VMHANDLE local = c->locals.head;
+    VMHANDLE local = table->head;
     while (local) {
         Local *sym = GetLocalPtr(local);
         if (strcasecmp(name, sym->name) == 0)
@@ -112,13 +139,21 @@ void DumpGlobals(ParseContext *c)
 /* DumpLocals - dump a local symbol table */
 void DumpLocals(ParseContext *c)
 {
-    VMHANDLE local = c->locals.head;
-    if (local) {
-        VM_printf("Locals:\n");
-        while (local) {
-            Local *sym = GetLocalPtr(local);
+    VMHANDLE symbol;
+    if ((symbol = c->arguments.head) != NULL) {
+        VM_printf("Arguments:\n");
+        while (symbol) {
+            Local *sym = GetLocalPtr(symbol);
             VM_printf("  %s %d\n", sym->name, sym->offset);
-            local = sym->next;
+            symbol = sym->next;
+        }
+    }
+    if ((symbol = c->locals.head) != NULL) {
+        VM_printf("Locals:\n");
+        while (symbol) {
+            Local *sym = GetLocalPtr(symbol);
+            VM_printf("  %s %d\n", sym->name, sym->offset);
+            symbol = sym->next;
         }
     }
 }

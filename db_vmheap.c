@@ -145,6 +145,19 @@ VMHANDLE NewType(ObjHeap *heap, TypeID id)
     return object;
 }
 
+/* IsHandleType - check to see if a type is a heap object */
+int IsHandleType(VMHANDLE type)
+{
+    switch (GetTypePtr(type)->id) {
+    case TYPE_STRING:
+    case TYPE_ARRAY:
+    case TYPE_FUNCTION:
+        return VMTRUE;
+    default:
+        return VMFALSE;
+    }
+}
+
 /* NewCode - create a new code object */
 VMHANDLE NewCode(ObjHeap *heap, size_t size)
 {

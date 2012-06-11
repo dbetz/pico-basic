@@ -27,47 +27,52 @@ struct Interpreter {
     VMVALUE *stackTop;
     VMVALUE *fp;
     VMVALUE *sp;
+    VMHANDLE *hfp;
+    VMHANDLE *hsp;
+    VMHANDLE code;
+    uint8_t *cbase;
     uint8_t *pc;
     int argc;
 };
 
 /* stack manipulation macros */
-#define Reserve(i, n)   do {                                    \
-                            if ((i)->sp - (n) < (i)->stack)     \
-                                StackOverflow(i);               \
-                            else  {                             \
-                                int cnt = (n);                  \
-                                while (--cnt >= 0)              \
-                                    Push(i, 0);                 \
-                            }                                   \
+#define Reserve(i, n)   do {                                            \
+                            if ((i)->sp - (n) <= (VMVALUE *)(i)->hsp)   \
+                                StackOverflow(i);                       \
+                            else  {                                     \
+                                int cnt = (n);                          \
+                                while (--cnt >= 0)                      \
+                                    Push(i, 0);                         \
+                            }                                           \
                         } while (0)
-#define CPush(i, v)     do {                                    \
-                            if ((i)->sp - 1 < (i)->stack)       \
-                                StackOverflow(i);               \
-                            else                                \
-                                Push(i, v);                     \
+#define CPush(i, v)     do {                                            \
+                            if (--(i)->sp <= (VMVALUE *)(i)->hsp)       \
+                                StackOverflow(i);                       \
+                            else                                        \
+                                *(i)->sp = (v);                         \
                         } while (0)
 #define Push(i, v)      (*--(i)->sp = (v))
 #define Pop(i)          (*(i)->sp++)
 #define Drop(i, n)      ((i)->sp += (n))
 
-/* check for a specified number of arguments */
-#define CheckArgCountEq(i, n)   do {                                            \
-                                    if ((i)->argc != (n))                       \
-                                        Abort(i, str_argument_count_err);       \
-                                } while (0)
-
-/* check for at least a specified number of arguments */
-#define CheckArgCountGe(i, n)   do {                                            \
-                                    if ((i)->argc < (n))                        \
-                                        Abort(i, str_argument_count_err);       \
-                                } while (0)
-
-/* check for a range of number of arguments */
-#define CheckArgCountBt(i, m, n) do {                                           \
-                                    if ((i)->argc < (m) || (i)->argc > (n))     \
-                                        Abort(i, str_argument_count_err);       \
-                                } while (0)
+#define ReserveH(i, n)  do {                                            \
+                            if ((i)->hsp + (n) >= (VMHANDLE *)(i)->sp)  \
+                                StackOverflow(i);                       \
+                            else  {                                     \
+                                int cnt = (n);                          \
+                                while (--cnt >= 0)                      \
+                                    PushH(i,0);                         \
+                            }                                           \
+                        } while (0)
+#define CPushH(i, v)    do {                                            \
+                            if (++(i)->hsp >= (VMHANDLE *)(i)->sp)      \
+                                StackOverflow(i);                       \
+                            else                                        \
+                                *(i)->hsp = (v);                        \
+                        } while (0)
+#define PushH(i, v)     (*++(i)->hsp = (v))
+#define PopH(i)         (*(i)->hsp--)
+#define DropH(i, n)     ((i)->hsp -= (n))
 
 /* prototypes */
 void StackOverflow(Interpreter *i);

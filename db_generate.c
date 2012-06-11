@@ -12,8 +12,6 @@ static void code_shortcircuit(ParseContext *c, int op, ParseTreeNode *expr, PVAL
 static void code_arrayref(ParseContext *c, ParseTreeNode *expr, PVAL *pv);
 static void code_call(ParseContext *c, ParseTreeNode *expr, PVAL *pv);
 static void code_index(ParseContext *c, PValOp fcn, PVAL *pv);
-static VMVALUE rd_cword(ParseContext *c, VMUVALUE off);
-static void wr_cword(ParseContext *c, VMUVALUE off, VMVALUE w);
 
 /* code_lvalue - generate code for an l-value expression */
 void code_lvalue(ParseContext *c, ParseTreeNode *expr, PVAL *pv)
@@ -48,9 +46,9 @@ static void code_expr(ParseContext *c, ParseTreeNode *expr, PVAL *pv)
         putcword(c, expr->u.integerLit.value);
         pv->fcn = NULL;
         break;
-    case NodeTypeFunctionLit:
-        putcbyte(c, OP_LIT);
-        putcword(c, expr->u.functionLit.offset);
+    case NodeTypeHandleLit:
+        putcbyte(c, OP_LITH);
+        putcword(c, (VMUVALUE)expr->u.handleLit.handle);
         pv->fcn = NULL;
         break;
     case NodeTypeUnaryOp:
@@ -151,13 +149,14 @@ void chklvalue(ParseContext *c, PVAL *pv)
 /* code_global - compile a global variable reference */
 void code_global(ParseContext *c, PValOp fcn, PVAL *pv)
 {
+    Symbol *sym = GetSymbolPtr(pv->u.hValue);
     switch (fcn) {
     case PV_LOAD:
-        putcbyte(c, OP_GREF);
+        putcbyte(c, IsHandleType(sym->type) ? OP_GREFH : OP_GREF);
         putcword(c, (VMUVALUE)pv->u.hValue);
         break;
     case PV_STORE:
-        putcbyte(c, OP_GSET);
+        putcbyte(c, IsHandleType(sym->type) ? OP_GSETH : OP_GSET);
         putcword(c, (VMUVALUE)pv->u.hValue);
         break;
     }
@@ -166,14 +165,14 @@ void code_global(ParseContext *c, PValOp fcn, PVAL *pv)
 /* code_local - compile an local reference */
 void code_local(ParseContext *c, PValOp fcn, PVAL *pv)
 {
-    Local *sym = (Local *)GetLocalPtr(pv->u.hValue);
+    Local *sym = GetLocalPtr(pv->u.hValue);
     switch (fcn) {
     case PV_LOAD:
-        putcbyte(c, OP_LREF);
+        putcbyte(c, IsHandleType(sym->type) ? OP_LREFH : OP_LREF);
         putcbyte(c, sym->offset);
         break;
     case PV_STORE:
-        putcbyte(c, OP_LSET);
+        putcbyte(c, IsHandleType(sym->type) ? OP_LSETH : OP_LSET);
         putcbyte(c, sym->offset);
         break;
     }
@@ -220,7 +219,7 @@ int putcword(ParseContext *c, VMVALUE w)
 }
 
 /* rd_cword - get a code word from the code buffer */
-static VMVALUE rd_cword(ParseContext *c, VMUVALUE off)
+VMVALUE rd_cword(ParseContext *c, VMUVALUE off)
 {
     uint8_t *p = &c->codeBuf[off] + sizeof(VMVALUE);
     int cnt = sizeof(VMVALUE);
@@ -233,7 +232,7 @@ static VMVALUE rd_cword(ParseContext *c, VMUVALUE off)
 }
 
 /* wr_cword - put a word into the code buffer */
-static void wr_cword(ParseContext *c, VMUVALUE off, VMVALUE v)
+void wr_cword(ParseContext *c, VMUVALUE off, VMVALUE v)
 {
     int i;
     union {

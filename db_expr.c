@@ -401,8 +401,9 @@ static ParseTreeNode *ParseArrayReference(ParseContext *c, ParseTreeNode *arrayN
 /* ParseCall - parse a function or subroutine call */
 static ParseTreeNode *ParseCall(ParseContext *c, ParseTreeNode *functionNode)
 {
-    Type *typ = GetTypePtr(functionNode->type);
-    ParseTreeNode *node = NewParseTreeNode(c, typ->u.functionInfo.returnType, NodeTypeFunctionCall);
+    Type *type = GetTypePtr(functionNode->type);
+    ParseTreeNode *node = NewParseTreeNode(c, type->u.functionInfo.returnType, NodeTypeFunctionCall);
+    VMHANDLE arg = type->u.functionInfo.arguments.head;
     ExprList *list = &node->u.functionCall.args;
     Token tkn;
 
@@ -414,11 +415,30 @@ static ParseTreeNode *ParseCall(ParseContext *c, ParseTreeNode *functionNode)
     if ((tkn = GetToken(c)) != ')') {
         SaveToken(c, tkn);
         do {
-            AddExprToList(c, list, ParseExpr(c));
+            ParseTreeNode *actual;
+        
+            /* get the actual argument */
+            actual = ParseExpr(c);
+        
+            /* check the argument count and type */
+            if (arg) {
+                Local *sym = GetLocalPtr(arg);
+                if (actual->type != sym->type)
+                    ParseError(c, "wrong argument type");
+                arg = sym->next;
+            }
+            else
+                ParseError(c, "too many arguments");
+
+            AddExprToList(c, list, actual);
             ++node->u.functionCall.argc;
         } while ((tkn = GetToken(c)) == ',');
         Require(c, tkn, ')');
     }
+
+    /* make sure there werent' too many arguments specified */
+    if (arg)
+        ParseError(c, "too few arguments");
 
     /* return the function call node */
     return node;
@@ -464,12 +484,24 @@ ParseTreeNode *GetSymbolRef(ParseContext *c, char *name)
         node->u.symbolRef.fcn = code_local;
     }
 
+    /* handle function arguments */
+    else if (c->codeType != CODE_TYPE_MAIN && (symbol = FindArgument(c, name)) != NULL) {
+        node->u.symbolRef.symbol = symbol;
+        node->u.symbolRef.fcn = code_local;
+    }
+
     /* handle global symbols */
     else if ((symbol = FindGlobal(c, c->token)) != NULL) {
         Symbol *sym = GetSymbolPtr(symbol);
         if (IsConstant(sym)) {
-            node->nodeType = NodeTypeIntegerLit;
-            node->u.integerLit.value = sym->v.iValue;
+            if (IsHandleType(sym->type)) {
+                node->nodeType = NodeTypeHandleLit;
+                node->u.handleLit.handle = sym->v.hValue;
+            }
+            else {
+                node->nodeType = NodeTypeIntegerLit;
+                node->u.integerLit.value = sym->v.iValue;
+            }
         }
         else {
             node->u.symbolRef.symbol = symbol;

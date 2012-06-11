@@ -10,6 +10,8 @@
 
 /* statement handler prototypes */
 static void ParseDef(ParseContext *c);
+static void ParseFunctionDef(ParseContext *c, char *name, Token tkn);
+static void ParseConstantDef(ParseContext *c, char *name);
 static void ParseEndDef(ParseContext *c);
 static void ParseDim(ParseContext *c);
 static int ParseVariableDecl(ParseContext *c, char *name, VMVALUE *pSize);
@@ -23,7 +25,6 @@ static void ParseElse(ParseContext *c);
 static void ParseElseIf(ParseContext *c);
 static void ParseEndIf(ParseContext *c);
 static void ParseEnd(ParseContext *c);
-static void ParseConstantDef(ParseContext *c, char *name);
 static void ParseFor(ParseContext *c);
 static void ParseNext(ParseContext *c);
 static void ParseDo(ParseContext *c);
@@ -143,38 +144,58 @@ static void ParseDef(ParseContext *c)
         ParseConstantDef(c, name);
 
     /* otherwise, assume a function definition */
-    else {
-        VMHANDLE symbol;
-        Symbol *sym;
+    else
+        ParseFunctionDef(c, name, tkn);
+}
 
-        /* save the lookahead token */
-        SaveToken(c, tkn);
+/* ParseFunctionDef - parse a 'DEF <name> (' statement */
+static void ParseFunctionDef(ParseContext *c, char *name, Token tkn)
+{
+    VMHANDLE symbol, type;
+    Symbol *sym;
+    Type *typ;
 
-        /* enter the function name in the global symbol table */
-        symbol = AddGlobal(c, name, SC_CONSTANT, DefaultType(c, name));
-        sym = GetSymbolPtr(symbol);
+    /* make the function type */
+    type = NewType(c->heap, TYPE_FUNCTION);
+    typ = GetTypePtr(type);
+    typ->u.functionInfo.returnType = DefaultType(c, name);
+    InitSymbolTable(&c->arguments);
+    
+    /* enter the function name in the global symbol table */
+    symbol = AddGlobal(c, name, SC_CONSTANT, type);
+    sym = GetSymbolPtr(symbol);
 
-        /* start the code under construction */
-        StartCode(c, sym->name, CODE_TYPE_FUNCTION);
-        sym->v.hValue = c->code;
+    /* start the code under construction */
+    StartCode(c, sym->name, CODE_TYPE_FUNCTION);
+    sym->v.hValue = c->code;
 
-        /* get the argument list */
-        if ((tkn = GetToken(c)) == '(') {
-            if ((tkn = GetToken(c)) != ')') {
-                int offset = 1;
-                SaveToken(c, tkn);
-                do {
-                    FRequire(c, T_IDENTIFIER);
-                    AddLocal(c, c->token, DefaultType(c, name), offset);
+    /* get the argument list */
+    if (tkn == '(') {
+        if ((tkn = GetToken(c)) != ')') {
+            int offset = 0;
+            int handleOffset = -1;
+            SaveToken(c, tkn);
+            do {
+                VMHANDLE type;
+                FRequire(c, T_IDENTIFIER);
+                type = DefaultType(c, c->token);
+                if (IsHandleType(type)) {
+                    AddArgument(c, c->token, type, handleOffset);
+                    --handleOffset;
+                }
+                else {
+                    AddArgument(c, c->token, type, offset);
                     ++offset;
-                } while ((tkn = GetToken(c)) == ',');
-            }
+                }
+            } while ((tkn = GetToken(c)) == ',');
             Require(c, tkn, ')');
         }
-        else
-            SaveToken(c, tkn);
     }
-
+    
+    /* store the argument symbol table */
+    typ = GetTypePtr(type);
+    typ->u.functionInfo.arguments = c->arguments;
+    
     FRequire(c, T_EOL);
 }
 
@@ -254,10 +275,17 @@ static void ParseDim(ParseContext *c)
 
         /* otherwise, add to the local symbol table */
         else {
+            VMHANDLE type = DefaultType(c, name);
             if (isArray)
                 ParseError(c, "local arrays are not supported", NULL);
-            AddLocal(c, name, DefaultType(c, name), c->localOffset + F_SIZE + 1);
-            ++c->localOffset;
+            if (IsHandleType(type)) {
+                AddLocal(c, name, type, c->handleLocalOffset);
+                ++c->handleLocalOffset;
+            }
+            else {
+                AddLocal(c, c->token, type, c->localOffset);
+                --c->localOffset;
+            }
         }
 
     } while ((tkn = GetToken(c)) == ',');
@@ -720,7 +748,8 @@ static void ParseReturn(ParseContext *c)
         ParseRValue(c);
         FRequire(c, T_EOL);
     }
-    putcbyte(c, OP_RETURN);
+    putcbyte(c, OP_BR);
+    c->returnFixups = putcword(c, c->returnFixups);
 }
 
 /* ParsePrint - handle the 'PRINT' statement */
@@ -773,7 +802,7 @@ static void CallHandler(ParseContext *c, char *name, ParseTreeNode *expr)
         code_rvalue(c, expr);
     
     /* compile the function symbol reference */
-    putcbyte(c, OP_LIT);
+    putcbyte(c, OP_LITH);
     putcword(c, sym->v.iValue);
 
     /* call the function */

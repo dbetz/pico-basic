@@ -9,8 +9,9 @@
 
 /* stack frame offsets */
 #define F_FP    -1
-#define F_PC    -2
-#define F_SIZE  2
+#define F_HFP   -2
+#define F_PC    -3
+#define F_SIZE  3
 
 /* opcodes */
 #define OP_HALT         0x00    /* halt */
@@ -51,7 +52,14 @@
 #define OP_DROP         0x23    /* drop the top element of the stack */
 
 #define OP_LITH         0x40    /* literal handle */
-#define OP_CAT          0x41    /* concatenate two strings */
+#define OP_GREFH        0x41    /* load a handle global variable */
+#define OP_GSETH        0x42    /* set a handle global variable */
+#define OP_LREFH        0x43    /* load a handle local variable relative to the frame pointer */
+#define OP_LSETH        0x44    /* set a handlelocal variable relative to the frame pointer */
+#define OP_VREFH        0x45    /* load an element of a vector */
+#define OP_VSETH        0x46    /* set an element of a vector */
+
+#define OP_CAT          0x47    /* concatenate two strings */
 
 #if ALIGN_MASK == 1
 #define get_VMVALUE(var, getbyte)               \

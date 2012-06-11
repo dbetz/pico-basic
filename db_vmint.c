@@ -1,6 +1,6 @@
 /* db_vmint.c - bytecode interpreter for a simple virtual machine
  *
- * Copyright (c) 2009 by David Michael Betz.  All rights reserved.
+ * Copyright (c) 2009-2012 by David Michael Betz.  All rights reserved.
  *
  */
 
@@ -28,18 +28,20 @@ uint8_t *InitInterpreter(Interpreter *i, ObjHeap *heap, size_t stackSize)
 int Execute(Interpreter *i, VMHANDLE main)
 {
     VMVALUE tmp, tmp2, ind;
-    VMHANDLE obj;
+    VMHANDLE obj, htmp;
     int8_t tmpb;
 
     /* initialize */
-    i->pc = GetCodePtr(main);
+    i->code = main;
+    i->cbase = i->pc = GetCodePtr(main);
     i->sp = i->fp = i->stackTop;
+    i->hsp = i->hfp = (VMHANDLE *)i->stack - 1;
 
     if (setjmp(i->errorTarget))
         return VMFALSE;
 
     for (;;) {
-#if 0
+#if 1
         ShowStack(i);
         DecodeInstruction(0, 0, i->pc);
 #endif
@@ -151,7 +153,6 @@ int Execute(Interpreter *i, VMHANDLE main)
             *i->sp = (*i->sp > tmp ? VMTRUE : VMFALSE);
             break;
         case OP_LIT:
-        case OP_LITH:
             get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             CPush(i, tmp);
             break;
@@ -174,36 +175,79 @@ int Execute(Interpreter *i, VMHANDLE main)
             i->fp[(int)tmpb] = Pop(i);
             break;
         case OP_VREF:
-            ind = Pop(i);
-            obj = (VMHANDLE)i->sp[0];
+            ind = *i->sp;
+            obj = *i->hsp;
             if (ind < 0 || ind >= GetHeapObjSize(obj))
                 Abort(i, str_array_subscript_err, ind);
-            i->sp[0] = GetIntegerVectorBase(obj)[ind];
+            *i->sp = GetIntegerVectorBase(obj)[ind];
+            DropH(i, 1);
             break;
         case OP_VSET:
             tmp2 = Pop(i);
             ind = Pop(i);
-            obj = (VMHANDLE)i->sp[0];
+            obj = *i->hsp;
             if (ind < 0 || ind >= GetHeapObjSize(obj))
                 Abort(i, str_array_subscript_err, ind);
             GetIntegerVectorBase(obj)[ind] = tmp2;
-            Drop(i, 1);
+            DropH(i, 1);
             break;
         case OP_RESERVE:
             tmp = VMCODEBYTE(i->pc++);
+            tmp2 = VMCODEBYTE(i->pc++);
             Reserve(i, tmp);
+            ReserveH(i, tmp2);
+            break;
+        case OP_LITH:
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
+            CPushH(i, (VMHANDLE)tmp);
+            break;
+        case OP_GREFH:
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
+            CPushH(i, GetSymbolPtr((VMHANDLE)tmp)->v.hValue);
+            break;
+        case OP_GSETH:
+            get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
+            GetSymbolPtr((VMHANDLE)tmp)->v.hValue = PopH(i);
+            break;
+        case OP_LREFH:
+            tmpb = (int8_t)VMCODEBYTE(i->pc++);
+            CPushH(i, i->hfp[(int)tmpb]);
+            break;
+        case OP_LSETH:
+            tmpb = (int8_t)VMCODEBYTE(i->pc++);
+            i->hfp[(int)tmpb] = PopH(i);
+            break;
+        case OP_VREFH:
+            ind = Pop(i);
+            obj = *i->hsp;
+            if (ind < 0 || ind >= GetHeapObjSize(obj))
+                Abort(i, str_array_subscript_err, ind);
+            *i->hsp = GetStringVectorBase(obj)[ind];
+            break;
+        case OP_VSETH:
+            htmp = PopH(i);
+            ind = Pop(i);
+            obj = *i->hsp;
+            if (ind < 0 || ind >= GetHeapObjSize(obj))
+                Abort(i, str_array_subscript_err, ind);
+            GetStringVectorBase(obj)[ind] = htmp;
+            DropH(i, 1);
             break;
         case OP_CALL:
             i->argc = VMCODEBYTE(i->pc++);
-            StartCode(i, (VMHANDLE)*i->sp);
+            StartCode(i, *i->hsp);
             break;
         case OP_RETURN:
             tmp = *i->sp;
-            i->pc = i->heap->data + i->fp[F_PC];
+            i->hsp = i->hfp;
+            i->code = PopH(i);
+            i->cbase = GetCodePtr(i->code);
+            i->pc = i->cbase + i->fp[F_PC];
             i->sp = i->fp;
             Drop(i, VMCODEBYTE(i->pc - 1));
             i->fp = i->stack + i->fp[F_FP];
-            *i->sp = tmp;
+            i->hfp = (VMHANDLE *)i->stack + i->fp[F_HFP];
+            Push(i, tmp);
             break;
         case OP_DROP:
             Drop(i, 1);
@@ -217,7 +261,7 @@ int Execute(Interpreter *i, VMHANDLE main)
 
 static void StartCode(Interpreter *i, VMHANDLE object)
 {
-    VMVALUE tmp;
+    VMVALUE tmp, tmp2;
 
     if (!object)
         Abort(i, str_not_code_object_err, object);
@@ -226,10 +270,15 @@ static void StartCode(Interpreter *i, VMHANDLE object)
     case ObjTypeCode:
         tmp = (VMVALUE)(i->fp - i->stack);
         i->fp = i->sp;
+        CPushH(i, i->code);
+        tmp2 = (VMVALUE)(i->hfp - (VMHANDLE *)i->stack);
+        i->hfp = i->hsp;
         Reserve(i, F_SIZE);
         i->fp[F_FP] = tmp;
-        i->fp[F_PC] = (VMVALUE)(i->pc - i->heap->data);
-        i->pc = GetCodePtr((VMHANDLE)object);
+        i->fp[F_HFP] = tmp2;
+        i->fp[F_PC] = (VMVALUE)(i->pc - i->cbase);
+        i->code = object;
+        i->cbase = i->pc = GetCodePtr(object);
         break;
     case ObjTypeIntrinsic:
         (*GetIntrinsicHandler(object))(i);
@@ -243,8 +292,8 @@ static void StartCode(Interpreter *i, VMHANDLE object)
 
 static void StringCat(Interpreter *i)
 {
-    VMHANDLE hStr2 = (VMHANDLE)Pop(i);
-    VMHANDLE hStr1 = (VMHANDLE)i->sp[0];
+    VMHANDLE hStr2 = PopH(i);
+    VMHANDLE hStr1 = *i->hsp;
     uint8_t *str1, *str2, *str;
     size_t len1, len2;
 
@@ -257,8 +306,8 @@ static void StringCat(Interpreter *i)
     len2 = GetHeapObjSize(hStr2);
 
     /* allocate the result string */
-    i->sp[0] = (VMVALUE)NewString(i->heap, len1 + len2);
-    str = GetStringPtr((VMHANDLE)i->sp[0]);
+    *i->hsp = NewString(i->heap, len1 + len2);
+    str = GetStringPtr((VMHANDLE)*i->sp);
 
     /* copy the source strings into the result string */
     memcpy(str, str1, len1);
@@ -267,12 +316,23 @@ static void StringCat(Interpreter *i)
 
 void ShowStack(Interpreter *i)
 {
+    VMHANDLE *hp;
     VMVALUE *p;
+    
+    for (hp = (VMHANDLE *)i->stack; hp <= i->hsp; ++hp) {
+        if (hp == i->hfp)
+            VM_printf(" <hfp>");
+        VM_printf(" %08x", (VMUVALUE)*hp);
+    }
+    
+    VM_printf(" ---");
+    
     for (p = i->sp; p < i->stackTop; ++p) {
         if (p == i->fp)
             VM_printf(" <fp>");
         VM_printf(" %d", *p);
     }
+    
     VM_putchar('\n');
 }
 

@@ -156,6 +156,7 @@ ObjHeap *InitHeap(uint8_t *data, size_t size, int nHandles);
 VMHANDLE NewSymbol(ObjHeap *heap, const char *name, StorageClass storageClass, VMHANDLE type);
 VMHANDLE NewLocal(ObjHeap *heap, const char *name, VMHANDLE type, VMVALUE offset);
 VMHANDLE NewType(ObjHeap *heap, TypeID id);
+int IsHandleType(VMHANDLE type);
 VMHANDLE NewCode(ObjHeap *heap, size_t size);
 VMHANDLE NewString(ObjHeap *heap, size_t size);
 VMHANDLE StoreIntegerVector(ObjHeap *heap, const VMVALUE *buf, size_t size);

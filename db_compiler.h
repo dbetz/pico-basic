@@ -35,6 +35,8 @@ typedef enum {
     T_NONE,
     T_REM = 0x100,  /* keywords start here */
     T_DEF,
+    T_FUNCTION,
+    T_SUB,
     T_DIM,
     T_AS,
     T_LET,
@@ -60,6 +62,8 @@ typedef enum {
     T_PRINT,
     T_ELSE_IF,  /* compound keywords */
     T_END_DEF,
+    T_END_FUNCTION,
+    T_END_SUB,
     T_END_IF,
     T_DO_WHILE,
     T_DO_UNTIL,
@@ -118,7 +122,8 @@ struct Label {
 /* code types */
 typedef enum {
     CODE_TYPE_MAIN,
-    CODE_TYPE_FUNCTION
+    CODE_TYPE_FUNCTION,
+    CODE_TYPE_SUB
 } CodeType;
 
 /* initialize a common type field */
@@ -160,6 +165,8 @@ typedef struct {
     Label *labels;                  /* parse - local labels */
     CodeType codeType;              /* parse - type of code under construction */
     char *codeName;                 /* parse - name of code under construction */
+    int argumentCount;              /* parse - number of non-handle arguments */
+    int handleArgumentCount;        /* parse - number of handle arguments */
     SymbolTable arguments;          /* parse - arguments of current function definition */
     SymbolTable locals;             /* parse - local variables of current function definition */
     int localOffset;                /* parse - offset to next available local variable */
@@ -258,7 +265,6 @@ struct ParseTreeNode {
         struct {
             ParseTreeNode *fcn;
             ExprList args;
-            int argc;
         } functionCall;
         struct {
             ExprList exprs;

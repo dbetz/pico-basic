@@ -455,20 +455,25 @@ static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size)
         case OP_LIT:
         case OP_GREF:
         case OP_GSET:
+        case OP_GREFH:
+        case OP_GSETH:
             p += sizeof(VMVALUE);
             break;
         case OP_LREF:
         case OP_LSET:
+        case OP_LREFH:
+        case OP_LSETH:
             p += 1;
             break;
         case OP_VREF:
         case OP_VSET:
+        case OP_VREFH:
+        case OP_VSETH:
             break;
         case OP_RESERVE:
-        case OP_CALL:
-            p += 1;
-            break;
         case OP_RETURN:
+            p += 2;
+        case OP_CALL:
         case OP_DROP:
             break;
         case OP_LITH:

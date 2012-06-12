@@ -124,7 +124,6 @@ static void code_call(ParseContext *c, ParseTreeNode *expr, PVAL *pv)
 
     /* call the function */
     putcbyte(c, OP_CALL);
-    putcbyte(c, expr->u.functionCall.argc);
 
     /* we've got an rvalue now */
     pv->fcn = NULL;

@@ -63,8 +63,10 @@ static FLASH_SPACE OTDEF otab[] = {
 { OP_VREFH,     "VREFH",    FMT_NONE    },
 { OP_VSETH,     "VSETH",    FMT_NONE    },
 { OP_RESERVE,   "RESERVE",  FMT_2BYTES  },
-{ OP_CALL,      "CALL",     FMT_BYTE    },
-{ OP_RETURN,    "RETURN",   FMT_NONE    },
+{ OP_CALL,      "CALL",     FMT_NONE    },
+{ OP_RETURN,    "RETURN",   FMT_2BYTES  },
+{ OP_RETURNH,   "RETURNH",  FMT_2BYTES  },
+{ OP_RETURNV,   "RETURNV",  FMT_2BYTES  },
 { OP_DROP,      "DROP",     FMT_NONE    },
 { 0,            NULL,       0           }
 };

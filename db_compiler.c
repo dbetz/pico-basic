@@ -164,6 +164,7 @@ void StartCode(ParseContext *c, char *name, CodeType type)
 
     /* initialize the code object under construction */
     c->codeName = name;
+    c->argumentCount = c->handleArgumentCount = 0;
     InitSymbolTable(&c->locals);
     c->code = NewCode(c->heap, 0);
     c->localOffset = -F_SIZE - 1;
@@ -200,14 +201,17 @@ void StoreCode(ParseContext *c)
     if (c->codeType != CODE_TYPE_MAIN) {
         c->codeBuf[1] = (-F_SIZE - 1) - c->localOffset;
         c->codeBuf[2] = c->handleLocalOffset - 1;
-        printf("fixups %08x, codeaddr %08x\n", c->returnFixups, codeaddr(c));
         if (c->returnFixups == codeaddr(c) - sizeof(VMVALUE)) {
             c->returnFixups = rd_cword(c, c->returnFixups);
-            printf("fixups %08x\n", c->returnFixups);
             c->cptr -= sizeof(VMVALUE) + 1;
         }
         fixupbranch(c, c->returnFixups, codeaddr(c));
-        putcbyte(c, OP_RETURN);
+        if (c->codeType == CODE_TYPE_FUNCTION)
+            putcbyte(c, OP_RETURN); // BUG: need to check for OP_RETURNH
+        else
+            putcbyte(c, OP_RETURNV);
+        putcbyte(c, c->argumentCount);
+        putcbyte(c, c->handleArgumentCount);
     }
 
     /* make sure all referenced labels were defined */
@@ -240,6 +244,7 @@ void StoreCode(ParseContext *c)
 /* AddIntrinsic1 - add an intrinsic function to the global symbol table */
 void AddIntrinsic1(ParseContext *c, char *name, char *types, VMHANDLE handler)
 {
+    int argumentCount, handleArgumentCount;
     VMHANDLE symbol, type, argType;
     Type *typ;
     
@@ -261,15 +266,20 @@ void AddIntrinsic1(ParseContext *c, char *name, char *types, VMHANDLE handler)
         break;
     }
     
+    /* initialize the argument counts */
+    argumentCount = handleArgumentCount = 0;
+    
     /* add the argument types */
     if (*types++ == '=') {
         while (*types) {
             switch (*types++) {
             case 'i':
                 argType = CommonType(c, integerType);
+                ++argumentCount;
                 break;
             case 's':
                 argType = CommonType(c, stringType);
+                ++handleArgumentCount;
                 break;
             default:
                 Fatal(c, "unknown argument type");

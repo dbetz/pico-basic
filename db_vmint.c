@@ -13,6 +13,7 @@
 
 /* prototypes for local functions */
 static void StartCode(Interpreter *i, VMHANDLE object);
+static void PopFrame(Interpreter *i);
 static void StringCat(Interpreter *i);
 
 /* InitInterpreter - initialize the interpreter */
@@ -191,13 +192,7 @@ int Execute(Interpreter *i, VMHANDLE main)
             GetIntegerVectorBase(obj)[ind] = tmp2;
             DropH(i, 1);
             break;
-        case OP_RESERVE:
-            tmp = VMCODEBYTE(i->pc++);
-            tmp2 = VMCODEBYTE(i->pc++);
-            Reserve(i, tmp);
-            ReserveH(i, tmp2);
-            break;
-        case OP_LITH:
+       case OP_LITH:
             get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             CPushH(i, (VMHANDLE)tmp);
             break;
@@ -233,21 +228,27 @@ int Execute(Interpreter *i, VMHANDLE main)
             GetStringVectorBase(obj)[ind] = htmp;
             DropH(i, 1);
             break;
-        case OP_CALL:
-            i->argc = VMCODEBYTE(i->pc++);
+        case OP_RESERVE:
+            tmp = VMCODEBYTE(i->pc++);
+            tmp2 = VMCODEBYTE(i->pc++);
+            Reserve(i, tmp);
+            ReserveH(i, tmp2);
+            break;
+         case OP_CALL:
             StartCode(i, *i->hsp);
             break;
         case OP_RETURN:
             tmp = *i->sp;
-            i->hsp = i->hfp;
-            i->code = PopH(i);
-            i->cbase = GetCodePtr(i->code);
-            i->pc = i->cbase + i->fp[F_PC];
-            i->sp = i->fp;
-            Drop(i, VMCODEBYTE(i->pc - 1));
-            i->fp = i->stack + i->fp[F_FP];
-            i->hfp = (VMHANDLE *)i->stack + i->fp[F_HFP];
+            PopFrame(i);
             Push(i, tmp);
+            break;
+        case OP_RETURNH:
+            htmp = *i->hsp;
+            PopFrame(i);
+            PushH(i, htmp);
+            break;
+        case OP_RETURNV:
+            PopFrame(i);
             break;
         case OP_DROP:
             Drop(i, 1);
@@ -269,10 +270,10 @@ static void StartCode(Interpreter *i, VMHANDLE object)
     switch (GetHeapObjType(object)) {
     case ObjTypeCode:
         tmp = (VMVALUE)(i->fp - i->stack);
-        i->fp = i->sp;
-        CPushH(i, i->code);
         tmp2 = (VMVALUE)(i->hfp - (VMHANDLE *)i->stack);
         i->hfp = i->hsp;
+        CPushH(i, i->code);
+        i->fp = i->sp;
         Reserve(i, F_SIZE);
         i->fp[F_FP] = tmp;
         i->fp[F_HFP] = tmp2;
@@ -282,12 +283,26 @@ static void StartCode(Interpreter *i, VMHANDLE object)
         break;
     case ObjTypeIntrinsic:
         (*GetIntrinsicHandler(object))(i);
-        Drop(i, i->argc);
         break;
     default:
         Abort(i, str_not_code_object_err, object);
         break;
     }
+}
+
+static void PopFrame(Interpreter *i)
+{
+    int argumentCount = VMCODEBYTE(i->pc++);
+    int handleArgumentCount = VMCODEBYTE(i->pc++);
+    i->code = i->hfp[HF_CODE];
+    i->hsp = i->hfp;
+    DropH(i, handleArgumentCount);
+    i->cbase = GetCodePtr(i->code);
+    i->pc = i->cbase + i->fp[F_PC];
+    i->hfp = (VMHANDLE *)i->stack + i->fp[F_HFP];
+    i->sp = i->fp;
+    i->fp = i->stack + i->fp[F_FP];
+    Drop(i, argumentCount);
 }
 
 static void StringCat(Interpreter *i)

@@ -32,7 +32,6 @@ struct Interpreter {
     VMHANDLE code;
     uint8_t *cbase;
     uint8_t *pc;
-    int argc;
 };
 
 /* stack manipulation macros */

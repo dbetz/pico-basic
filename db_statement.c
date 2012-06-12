@@ -59,6 +59,14 @@ void ParseStatement(ParseContext *c, Token tkn)
     case T_END_DEF:
         ParseEndDef(c);
         break;
+    case T_FUNCTION:
+        break;
+    case T_END_FUNCTION:
+        break;
+    case T_SUB:
+        break;
+    case T_END_SUB:
+        break;
     case T_DIM:
         ParseDim(c);
         break;
@@ -176,15 +184,17 @@ static void ParseFunctionDef(ParseContext *c, char *name, Token tkn)
             int handleOffset = -1;
             SaveToken(c, tkn);
             do {
-                VMHANDLE type;
+                VMHANDLE argType;
                 FRequire(c, T_IDENTIFIER);
-                type = DefaultType(c, c->token);
-                if (IsHandleType(type)) {
-                    AddArgument(c, c->token, type, handleOffset);
+                argType = DefaultType(c, c->token);
+                if (IsHandleType(argType)) {
+                    AddArgument(c, c->token, argType, handleOffset);
+                    ++c->handleArgumentCount;
                     --handleOffset;
                 }
                 else {
-                    AddArgument(c, c->token, type, offset);
+                    AddArgument(c, c->token, argType, offset);
+                    ++c->argumentCount;
                     ++offset;
                 }
             } while ((tkn = GetToken(c)) == ',');
@@ -807,8 +817,6 @@ static void CallHandler(ParseContext *c, char *name, ParseTreeNode *expr)
 
     /* call the function */
     putcbyte(c, OP_CALL);
-    putcbyte(c, (expr ? 1 : 0));
-    putcbyte(c, OP_DROP);
 }
 
 /* DefineLabel - define a local label */

@@ -210,13 +210,14 @@ void fcn_printStr(Interpreter *i)
     VMHANDLE string;
     uint8_t *str;
     size_t size;
-    string = (VMHANDLE)i->sp[1];
+    string = i->hsp[0];
     str = GetByteVectorBase(string);
     size = GetHeapObjSize(string);
     while (size > 0) {
         VM_putchar(*str++);
         --size;
     }
+    DropH(i, 1);
 }
 
 /* fcn_printInt - printInt(n): print an integer */

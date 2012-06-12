@@ -21,6 +21,8 @@ static struct {
 /* these must be in the same order as the Token enum */
 {   "REM",      T_REM       },
 {   "DEF",      T_DEF       },
+{   "FUNCTION", T_FUNCTION  },
+{   "SUB",      T_SUB       },
 {   "DIM",      T_DIM       },
 {   "AS",       T_AS        },
 {   "LET",      T_LET       },
@@ -122,6 +124,8 @@ char *TokenName(Token token)
         break;
     case T_REM:
     case T_DEF:
+    case T_FUNCTION:
+    case T_SUB:
     case T_DIM:
     case T_AS:
     case T_LET:
@@ -149,6 +153,12 @@ char *TokenName(Token token)
         break;
     case T_END_DEF:
         name = "END DEF";
+        break;
+    case T_END_FUNCTION:
+        name = "END FUNCTION";
+        break;
+    case T_END_SUB:
+        name = "END SUB";
         break;
     case T_END_IF:
         name = "END IF";
@@ -295,6 +305,12 @@ static int NextToken(ParseContext *c)
                     switch (IdentifierToken(c, ch)) {
                     case T_DEF:
                         tkn = T_END_DEF;
+                        break;
+                    case T_FUNCTION:
+                        tkn = T_END_FUNCTION;
+                        break;
+                    case T_SUB:
+                        tkn = T_END_SUB;
                         break;
                     case T_IF:
                         tkn = T_END_IF;

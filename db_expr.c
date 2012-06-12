@@ -431,7 +431,6 @@ static ParseTreeNode *ParseCall(ParseContext *c, ParseTreeNode *functionNode)
                 ParseError(c, "too many arguments");
 
             AddExprToList(c, list, actual);
-            ++node->u.functionCall.argc;
         } while ((tkn = GetToken(c)) == ',');
         Require(c, tkn, ')');
     }

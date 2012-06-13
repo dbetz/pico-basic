@@ -12,7 +12,7 @@
 #include "db_vm.h"
 
 /* prototypes for local functions */
-static void StartCode(Interpreter *i, VMHANDLE object);
+static void StartCode(Interpreter *i);
 static void PopFrame(Interpreter *i);
 static void StringCat(Interpreter *i);
 
@@ -235,7 +235,7 @@ int Execute(Interpreter *i, VMHANDLE main)
             ReserveH(i, tmp2);
             break;
          case OP_CALL:
-            StartCode(i, *i->hsp);
+            StartCode(i);
             break;
         case OP_RETURN:
             tmp = *i->sp;
@@ -260,32 +260,33 @@ int Execute(Interpreter *i, VMHANDLE main)
     }
 }
 
-static void StartCode(Interpreter *i, VMHANDLE object)
+static void StartCode(Interpreter *i)
 {
+    VMHANDLE code = PopH(i);
     VMVALUE tmp, tmp2;
 
-    if (!object)
-        Abort(i, str_not_code_object_err, object);
+    if (!code)
+        Abort(i, str_not_code_object_err, code);
         
-    switch (GetHeapObjType(object)) {
+    switch (GetHeapObjType(code)) {
     case ObjTypeCode:
         tmp = (VMVALUE)(i->fp - i->stack);
         tmp2 = (VMVALUE)(i->hfp - (VMHANDLE *)i->stack);
         i->hfp = i->hsp;
-        CPushH(i, i->code);
+        PushH(i, i->code);
         i->fp = i->sp;
         Reserve(i, F_SIZE);
         i->fp[F_FP] = tmp;
         i->fp[F_HFP] = tmp2;
         i->fp[F_PC] = (VMVALUE)(i->pc - i->cbase);
-        i->code = object;
-        i->cbase = i->pc = GetCodePtr(object);
+        i->code = code;
+        i->cbase = i->pc = GetCodePtr(code);
         break;
     case ObjTypeIntrinsic:
-        (*GetIntrinsicHandler(object))(i);
+        (*GetIntrinsicHandler(code))(i);
         break;
     default:
-        Abort(i, str_not_code_object_err, object);
+        Abort(i, str_not_code_object_err, code);
         break;
     }
 }

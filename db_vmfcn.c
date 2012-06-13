@@ -224,6 +224,7 @@ void fcn_printStr(Interpreter *i)
 void fcn_printInt(Interpreter *i)
 {
     VM_printf("%d", i->sp[0]);
+    Drop(i, 1);
 }
 
 /* fcn_printTab - printTab(): print a tab */

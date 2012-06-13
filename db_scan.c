@@ -151,9 +151,6 @@ char *TokenName(Token token)
     case T_PRINT:
         name = ktab[token - T_REM].keyword;
         break;
-    case T_END_DEF:
-        name = "END DEF";
-        break;
     case T_END_FUNCTION:
         name = "END FUNCTION";
         break;
@@ -303,9 +300,6 @@ static int NextToken(ParseContext *c)
                 savePtr = c->sys->linePtr;
                 if ((ch = SkipSpaces(c)) != EOF && IdentifierCharP(ch)) {
                     switch (IdentifierToken(c, ch)) {
-                    case T_DEF:
-                        tkn = T_END_DEF;
-                        break;
                     case T_FUNCTION:
                         tkn = T_END_FUNCTION;
                         break;

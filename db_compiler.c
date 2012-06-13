@@ -134,7 +134,7 @@ VMHANDLE Compile(ParseContext *c, int oneStatement)
         if ((tkn = GetToken(c)) != T_EOL)
             ParseStatement(c, tkn);
             
-    } while (!oneStatement || c->codeType == CODE_TYPE_FUNCTION || c->bptr >= c->blockBuf);
+    } while (!oneStatement || c->codeType != CODE_TYPE_MAIN || c->bptr >= c->blockBuf);
         
     /* end the main code with a halt */
     putcbyte(c, OP_HALT);
@@ -158,7 +158,7 @@ void StartCode(ParseContext *c, char *name, CodeType type)
     if (type != CODE_TYPE_MAIN && c->cptr > c->codeBuf)
         ParseError(c, "functions must precede or follow the main code", NULL);
 
-    /* don't allow nested functions (for now anyway) */
+    /* don't allow nested functions */
     if (type != CODE_TYPE_MAIN && c->codeType != CODE_TYPE_MAIN)
         ParseError(c, "nested functions are not supported", NULL);
 
@@ -168,7 +168,7 @@ void StartCode(ParseContext *c, char *name, CodeType type)
     InitSymbolTable(&c->locals);
     c->code = NewCode(c->heap, 0);
     c->localOffset = -F_SIZE - 1;
-    c->handleLocalOffset = 1;
+    c->handleLocalOffset = HF_SIZE + 1;
     c->codeType = type;
     
     /* write the code prolog */

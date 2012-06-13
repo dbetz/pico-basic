@@ -61,7 +61,6 @@ typedef enum {
     T_RETURN,
     T_PRINT,
     T_ELSE_IF,  /* compound keywords */
-    T_END_DEF,
     T_END_FUNCTION,
     T_END_SUB,
     T_END_IF,

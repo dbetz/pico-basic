@@ -10,9 +10,8 @@
 
 /* statement handler prototypes */
 static void ParseDef(ParseContext *c);
-static void ParseFunctionDef(ParseContext *c, char *name, Token tkn);
-static void ParseConstantDef(ParseContext *c, char *name);
-static void ParseEndDef(ParseContext *c);
+static void ParseFunctionDef(ParseContext *c, int codeType);
+static void ParseEndFunction(ParseContext *c, int codeType);
 static void ParseDim(ParseContext *c);
 static int ParseVariableDecl(ParseContext *c, char *name, VMVALUE *pSize);
 static VMVALUE ParseScalarInitializer(ParseContext *c);
@@ -56,16 +55,17 @@ void ParseStatement(ParseContext *c, Token tkn)
     case T_DEF:
         ParseDef(c);
         break;
-    case T_END_DEF:
-        ParseEndDef(c);
-        break;
     case T_FUNCTION:
+        ParseFunctionDef(c, CODE_TYPE_FUNCTION);
         break;
     case T_END_FUNCTION:
+        ParseEndFunction(c, CODE_TYPE_FUNCTION);
         break;
     case T_SUB:
+        ParseFunctionDef(c, CODE_TYPE_SUB);
         break;
     case T_END_SUB:
+        ParseEndFunction(c, CODE_TYPE_SUB);
         break;
     case T_DIM:
         ParseDim(c);
@@ -141,32 +141,47 @@ void ParseStatement(ParseContext *c, Token tkn)
 static void ParseDef(ParseContext *c)
 {
     char name[MAXTOKEN];
-    Token tkn;
+    ParseTreeNode *expr;
+    VMHANDLE symbol;
+    Symbol *sym;
 
     /* get the name being defined */
     FRequire(c, T_IDENTIFIER);
     strcpy(name, c->token);
+    FRequire(c, '=');
 
-    /* check for a constant definition */
-    if ((tkn = GetToken(c)) == '=')
-        ParseConstantDef(c, name);
+    /* get the constant value */
+    expr = ParseExpr(c);
 
-    /* otherwise, assume a function definition */
-    else
-        ParseFunctionDef(c, name, tkn);
+    /* make sure it's a constant */
+    if (!IsIntegerLit(expr))
+        ParseError(c, "expecting a constant expression", NULL);
+
+    /* add the symbol as a global */
+    symbol = AddGlobal(c, name, SC_CONSTANT, DefaultType(c, name));
+    sym = GetSymbolPtr(symbol);
+    sym->v.iValue = expr->u.integerLit.value;
+
+    FRequire(c, T_EOL);
 }
 
 /* ParseFunctionDef - parse a 'DEF <name> (' statement */
-static void ParseFunctionDef(ParseContext *c, char *name, Token tkn)
+static void ParseFunctionDef(ParseContext *c, int codeType)
 {
+    char name[MAXTOKEN];
     VMHANDLE symbol, type;
     Symbol *sym;
+    Token tkn;
     Type *typ;
 
+    /* get the name being defined */
+    FRequire(c, T_IDENTIFIER);
+    strcpy(name, c->token);
+    
     /* make the function type */
     type = NewType(c->heap, TYPE_FUNCTION);
     typ = GetTypePtr(type);
-    typ->u.functionInfo.returnType = DefaultType(c, name);
+    typ->u.functionInfo.returnType = (codeType == CODE_TYPE_FUNCTION ? DefaultType(c, name) : NULL);
     InitSymbolTable(&c->arguments);
     
     /* enter the function name in the global symbol table */
@@ -174,14 +189,14 @@ static void ParseFunctionDef(ParseContext *c, char *name, Token tkn)
     sym = GetSymbolPtr(symbol);
 
     /* start the code under construction */
-    StartCode(c, sym->name, CODE_TYPE_FUNCTION);
+    StartCode(c, sym->name, codeType);
     sym->v.hValue = c->code;
 
     /* get the argument list */
-    if (tkn == '(') {
+    if ((tkn = GetToken(c)) == '(') {
         if ((tkn = GetToken(c)) != ')') {
             int offset = 0;
-            int handleOffset = -1;
+            int handleOffset = 0;
             SaveToken(c, tkn);
             do {
                 VMHANDLE argType;
@@ -200,43 +215,26 @@ static void ParseFunctionDef(ParseContext *c, char *name, Token tkn)
             } while ((tkn = GetToken(c)) == ',');
             Require(c, tkn, ')');
         }
+        tkn = GetToken(c);
     }
     
     /* store the argument symbol table */
     typ = GetTypePtr(type);
     typ->u.functionInfo.arguments = c->arguments;
     
-    FRequire(c, T_EOL);
+    Require(c, tkn, T_EOL);
 }
 
-/* ParseEndDef - parse the 'END DEF' statement */
-static void ParseEndDef(ParseContext *c)
+/* ParseEndFunction - parse the 'END FUNCTION' and 'END SUB' statements */
+static void ParseEndFunction(ParseContext *c, int codeType)
 {
-    if (c->codeType != CODE_TYPE_FUNCTION)
-        ParseError(c, "not in a function definition", NULL);
+    if (codeType != c->codeType) {
+        if (codeType == CODE_TYPE_FUNCTION)
+            ParseError(c, "not in FUNCTION definition", NULL);
+        else
+            ParseError(c, "not in SUB definition", NULL);
+    }
     StoreCode(c);
-}
-
-/* ParseConstantDef - parse a 'DEF <name> =' statement */
-static void ParseConstantDef(ParseContext *c, char *name)
-{
-    ParseTreeNode *expr;
-    VMHANDLE symbol;
-    Symbol *sym;
-
-    /* get the constant value */
-    expr = ParseExpr(c);
-
-    /* make sure it's a constant */
-    if (!IsIntegerLit(expr))
-        ParseError(c, "expecting a constant expression", NULL);
-
-    /* add the symbol as a global */
-    symbol = AddGlobal(c, name, SC_CONSTANT, DefaultType(c, name));
-    sym = GetSymbolPtr(symbol);
-    sym->v.iValue = expr->u.integerLit.value;
-
-    FRequire(c, T_EOL);
 }
 
 /* ParseDim - parse the 'DIM' statement */
@@ -749,11 +747,17 @@ static void ParseGoto(ParseContext *c)
 static void ParseReturn(ParseContext *c)
 {
     Token tkn;
+    if (c->codeType == CODE_TYPE_MAIN)
+        ParseError(c, "return not allowed outside of a FUNCTION or SUB", NULL);
     if ((tkn = GetToken(c)) == T_EOL) {
+        if (c->codeType == CODE_TYPE_FUNCTION)
+            ParseError(c, "expecting a return value", NULL);
         putcbyte(c, OP_LIT);
         putcword(c, 0);
     }
     else {
+        if (c->codeType == CODE_TYPE_SUB)
+            ParseError(c, "not expecting a return value", NULL);
         SaveToken(c, tkn);
         ParseRValue(c);
         FRequire(c, T_EOL);

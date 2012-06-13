@@ -14,7 +14,7 @@
 #define F_SIZE  3
 
 /* handle stack frame offsets */
-#define HF_CODE -1
+#define HF_CODE 1
 #define HF_SIZE 1
 
 /* opcodes */
@@ -53,9 +53,8 @@
 #define OP_RESERVE      0x20    /* reserve space on the stack */
 #define OP_CALL         0x21    /* call a function */
 #define OP_RETURN       0x22    /* return from a function leaving an integer result on the stack */
-#define OP_RETURNH      0x23    /* return from a function leaving a handle result on the stack */
-#define OP_RETURNV      0x24    /* return from a function leaving no result on the stack */
-#define OP_DROP         0x25    /* drop the top element of the stack */
+#define OP_RETURNV      0x23    /* return from a function leaving no result on the stack */
+#define OP_DROP         0x24    /* drop the top element of the stack */
 
 #define OP_LITH         0x40    /* literal handle */
 #define OP_GREFH        0x41    /* load a handle global variable */
@@ -64,8 +63,10 @@
 #define OP_LSETH        0x44    /* set a handlelocal variable relative to the frame pointer */
 #define OP_VREFH        0x45    /* load an element of a vector */
 #define OP_VSETH        0x46    /* set an element of a vector */
+#define OP_RETURNH      0x47    /* return from a function leaving a handle result on the stack */
+#define OP_DROPH        0x48    /* drop the top element of the handle stack */
 
-#define OP_CAT          0x47    /* concatenate two strings */
+#define OP_CAT          0x49    /* concatenate two strings */
 
 #if ALIGN_MASK == 1
 #define get_VMVALUE(var, getbyte)               \

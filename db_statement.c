@@ -158,7 +158,7 @@ static void ParseDef(ParseContext *c)
         ParseError(c, "expecting a constant expression", NULL);
 
     /* add the symbol as a global */
-    symbol = AddGlobal(c, name, SC_CONSTANT, DefaultType(c, name));
+    symbol = AddGlobal(c->heap, name, SC_CONSTANT, DefaultType(c, name));
     sym = GetSymbolPtr(symbol);
     sym->v.iValue = expr->u.integerLit.value;
 
@@ -169,7 +169,7 @@ static void ParseDef(ParseContext *c)
 static void ParseFunctionDef(ParseContext *c, int codeType)
 {
     char name[MAXTOKEN];
-    VMHANDLE symbol, type;
+    VMHANDLE symbol, type, returnType;
     Symbol *sym;
     Token tkn;
     Type *typ;
@@ -178,18 +178,21 @@ static void ParseFunctionDef(ParseContext *c, int codeType)
     FRequire(c, T_IDENTIFIER);
     strcpy(name, c->token);
     
+    /* determine the return value type */
+    returnType = (codeType == CODE_TYPE_FUNCTION ? DefaultType(c, name) : NULL);
+    
     /* make the function type */
     type = NewType(c->heap, TYPE_FUNCTION);
     typ = GetTypePtr(type);
-    typ->u.functionInfo.returnType = (codeType == CODE_TYPE_FUNCTION ? DefaultType(c, name) : NULL);
+    typ->u.functionInfo.returnType = returnType;
     InitSymbolTable(&c->arguments);
     
     /* enter the function name in the global symbol table */
-    symbol = AddGlobal(c, name, SC_CONSTANT, type);
+    symbol = AddGlobal(c->heap, name, SC_CONSTANT, type);
     sym = GetSymbolPtr(symbol);
 
     /* start the code under construction */
-    StartCode(c, sym->name, codeType);
+    StartCode(c, sym->name, codeType, returnType);
     sym->v.hValue = c->code;
 
     /* get the argument list */
@@ -203,12 +206,12 @@ static void ParseFunctionDef(ParseContext *c, int codeType)
                 FRequire(c, T_IDENTIFIER);
                 argType = DefaultType(c, c->token);
                 if (IsHandleType(argType)) {
-                    AddArgument(c, c->token, argType, handleOffset);
+                    AddLocal(c->heap, &c->arguments, c->token, argType, handleOffset);
                     ++c->handleArgumentCount;
                     --handleOffset;
                 }
                 else {
-                    AddArgument(c, c->token, argType, offset);
+                    AddLocal(c->heap, &c->arguments, c->token, argType, offset);
                     ++c->argumentCount;
                     ++offset;
                 }
@@ -271,7 +274,7 @@ static void ParseDim(ParseContext *c)
             }
 
             /* add the symbol to the global symbol table */
-            symbol = AddGlobal(c, name, SC_VARIABLE, DefaultType(c, name));
+            symbol = AddGlobal(c->heap, name, SC_VARIABLE, DefaultType(c, name));
             sym = GetSymbolPtr(symbol);
 
             /* create a vector object for arrays */
@@ -287,11 +290,11 @@ static void ParseDim(ParseContext *c)
             if (isArray)
                 ParseError(c, "local arrays are not supported", NULL);
             if (IsHandleType(type)) {
-                AddLocal(c, name, type, c->handleLocalOffset);
+                AddLocal(c->heap, &c->locals, name, type, c->handleLocalOffset);
                 ++c->handleLocalOffset;
             }
             else {
-                AddLocal(c, c->token, type, c->localOffset);
+                AddLocal(c->heap, &c->locals, c->token, type, c->localOffset);
                 --c->localOffset;
             }
         }
@@ -375,7 +378,7 @@ static void ParseArrayInitializers(ParseContext *c, VMVALUE size)
 
         /* look for the first non-blank line */
         while ((tkn = GetToken(c)) == T_EOL) {
-            if (!GetLine(c))
+            if (!GetLine(c->sys))
                 ParseError(c, "unexpected end of file in initializers", NULL);
         }
 
@@ -752,8 +755,6 @@ static void ParseReturn(ParseContext *c)
     if ((tkn = GetToken(c)) == T_EOL) {
         if (c->codeType == CODE_TYPE_FUNCTION)
             ParseError(c, "expecting a return value", NULL);
-        putcbyte(c, OP_LIT);
-        putcword(c, 0);
     }
     else {
         if (c->codeType == CODE_TYPE_SUB)
@@ -786,7 +787,7 @@ static void ParsePrint(ParseContext *c)
             needNewline = VMTRUE;
             SaveToken(c, tkn);
             expr = ParseExpr(c);
-            if (expr->type == CommonType(c, stringType))
+            if (expr->type == CommonType(c->heap, stringType))
                 CallHandler(c, "printStr", expr);
             else
                 CallHandler(c, "printInt", expr);
@@ -807,7 +808,7 @@ static void CallHandler(ParseContext *c, char *name, ParseTreeNode *expr)
     Symbol *sym;
     
     /* find the built-in function */
-    if (!(symbol = FindGlobal(c, name)))
+    if (!(symbol = FindGlobal(c->heap, name)))
         ParseError(c, "undefined print function: %s", name);
     sym = GetSymbolPtr(symbol);
         

@@ -8,6 +8,7 @@
 #include <string.h>
 #include "db_vmdebug.h"
 #include "db_image.h"
+#include "db_system.h"
 
 /* instruction output formats */
 #define FMT_NONE        0

@@ -125,45 +125,22 @@ typedef enum {
     CODE_TYPE_SUB
 } CodeType;
 
-/* initialize a common type field */
-#define InitCommonType(c, field, typeid)                \
-            (c)->field.type.id = typeid;                \
-            (c)->field.data = (void *)&(c)->field.type; \
-            (c)->field.hdr.handle = NULL;               \
-            (c)->field.hdr.refCnt = 0;                  \
-            (c)->field.hdr.type = ObjTypeType;          \
-            (c)->field.hdr.size = sizeof(Type);
-
-/* get a handle to one of the common types */
-#define CommonType(c, field)        (&(c)->field.data)
-
-/* add an intrinsic function to the symbol table */
-#define AddIntrinsic(c, name, id, types)                            \
-            {                                                       \
-                id##_struct.data = (void *)&id##_struct.handler;    \
-                AddIntrinsic1(c, name, types, IntrinsicHandle(id)); \
-            }
-
 /* parse context */
 typedef struct {
     System *sys;                    /* system context */
-    uint8_t *freeMark;              /* saved position for reclaiming compiler memory */
+    ObjHeap *heap;                  /* heap */
     jmp_buf errorTarget;            /* error target */
     uint8_t *nextLocal;             /* next local heap space location */
     size_t heapSize;                /* size of heap space in bytes */
-    int (*getLine)(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
-                                    /* scan - function to get a line of input */
-    void *getLineCookie;            /* scan - cookie for the getLine function */
-    int lineNumber;                 /* scan - current line number */
     Token savedToken;               /* scan - lookahead token */
     int tokenOffset;                /* scan - offset to the start of the current token */
     char token[MAXTOKEN];           /* scan - current token string */
     VMVALUE value;                  /* scan - current token integer value */
     int inComment;                  /* scan - inside of a slash/star comment */
-    SymbolTable globals;            /* parse - global variables and constants */
     Label *labels;                  /* parse - local labels */
     CodeType codeType;              /* parse - type of code under construction */
     char *codeName;                 /* parse - name of code under construction */
+    VMHANDLE returnType;            /* parse - return type of code under construction */
     int argumentCount;              /* parse - number of non-handle arguments */
     int handleArgumentCount;        /* parse - number of handle arguments */
     SymbolTable arguments;          /* parse - arguments of current function definition */
@@ -178,13 +155,6 @@ typedef struct {
     uint8_t *cptr;                  /* generate - next available code staging buffer position */
     uint8_t *ctop;                  /* generate - top of code staging buffer */
     uint8_t codeBuf[MAXCODE];       /* generate - code staging buffer */
-    ConstantType integerType;       /* parse - integer type */
-    ConstantType integerArrayType;  /* parse - integer array type */
-    ConstantType byteType;          /* parse - byte type */
-    ConstantType byteArrayType;     /* parse - byte array type */
-    ConstantType stringType;        /* parse - string type */
-    ConstantType stringArrayType;   /* parse - string array type */
-    ObjHeap *heap;                  /* heap */
 } ParseContext;
 
 /* partial value function codes */
@@ -272,11 +242,10 @@ struct ParseTreeNode {
 };
 
 /* db_compiler.c */
-ParseContext *InitCompiler(System *sys, int maxObjects);
-VMHANDLE Compile(ParseContext *c, int oneStatement);
-void StartCode(ParseContext *c, char *name, CodeType type);
+VMHANDLE Compile(System *sys, ObjHeap *heap, int oneStatement);
+void StartCode(ParseContext *c, char *name, CodeType type, VMHANDLE returnType);
 void StoreCode(ParseContext *c);
-void AddIntrinsic1(ParseContext *c, char *name, char *types, VMHANDLE handler);
+void DumpLocalVariables(ParseContext *c);
 void *LocalAlloc(ParseContext *c, size_t size);
 void Fatal(ParseContext *c, const char *fmt, ...);
 
@@ -291,10 +260,10 @@ ParseTreeNode *ParseExpr(ParseContext *c);
 ParseTreeNode *ParsePrimary(ParseContext *c);
 ParseTreeNode *GetSymbolRef(ParseContext *c, char *name);
 VMHANDLE DefaultType(ParseContext *c, const char *name);
+int IsConstant(Symbol *symbol);
 int IsIntegerLit(ParseTreeNode *node);
 
 /* db_scan.c */
-int GetLine(ParseContext *c);
 void FRequire(ParseContext *c, Token requiredToken);
 void Require(ParseContext *c, Token token, Token requiredToken);
 int GetToken(ParseContext *c);
@@ -304,18 +273,6 @@ int SkipSpaces(ParseContext *c);
 int GetChar(ParseContext *c);
 void UngetC(ParseContext *c);
 void ParseError(ParseContext *c, const char *err, ...);
-
-/* db_symbols.c */
-void InitSymbolTable(SymbolTable *table);
-VMHANDLE AddGlobal(ParseContext *c, const char *name, StorageClass storageClass, VMHANDLE type);
-VMHANDLE FindGlobal(ParseContext *c, const char *name);
-VMHANDLE AddArgument(ParseContext *c, const char *name, VMHANDLE type, VMVALUE offset);
-VMHANDLE FindArgument(ParseContext *c, const char *name);
-VMHANDLE AddLocal(ParseContext *c, const char *name, VMHANDLE type, VMVALUE offset);
-VMHANDLE FindLocal(ParseContext *c, const char *name);
-int IsConstant(Symbol *symbol);
-void DumpGlobals(ParseContext *c);
-void DumpLocals(ParseContext *c);
 
 /* db_generate.c */
 void code_lvalue(ParseContext *c, ParseTreeNode *expr, PVAL *pv);
@@ -332,11 +289,6 @@ void wr_cword(ParseContext *c, VMUVALUE off, VMVALUE v);
 int merge(ParseContext *c, VMUVALUE chn, VMUVALUE chn2);
 void fixup(ParseContext *c, VMUVALUE chn, VMUVALUE val);
 void fixupbranch(ParseContext *c, VMUVALUE chn, VMUVALUE val);
-
-/* scratch buffer interface */
-void BufRewind(void);
-int BufWriteWords(const VMVALUE *buf, int size);
-int BufReadWords(VMVALUE *buf, int size);
 
 #endif
 

@@ -252,7 +252,7 @@ static ParseTreeNode *ParseExpr9(ParseContext *c)
             int op;
             switch ((int)tkn) {
             case '+':
-                op = expr->type == CommonType(c, stringType) ? OP_CAT : OP_ADD;
+                op = expr->type == CommonType(c->heap, stringType) ? OP_CAT : OP_ADD;
                 break;
             case '-':
                 op = OP_SUB;
@@ -453,11 +453,11 @@ static ParseTreeNode *ParseSimplePrimary(ParseContext *c)
         FRequire(c,')');
         break;
     case T_NUMBER:
-        node = NewParseTreeNode(c, CommonType(c, integerType), NodeTypeIntegerLit);
+        node = NewParseTreeNode(c, CommonType(c->heap, integerType), NodeTypeIntegerLit);
         node->u.integerLit.value = c->value;
         break;
     case T_STRING:
-        node = NewParseTreeNode(c, CommonType(c, stringType), NodeTypeStringLit);
+        node = NewParseTreeNode(c, CommonType(c->heap, stringType), NodeTypeStringLit);
         node->u.stringLit.string = StoreByteVector(c->heap, ObjTypeString, (uint8_t *)c->token, strlen(c->token));
         break;
     case T_IDENTIFIER:
@@ -478,19 +478,19 @@ ParseTreeNode *GetSymbolRef(ParseContext *c, char *name)
     VMHANDLE symbol;
 
     /* handle local variables within a function */
-    if (c->codeType != CODE_TYPE_MAIN && (symbol = FindLocal(c, name)) != NULL) {
+    if (c->codeType != CODE_TYPE_MAIN && (symbol = FindLocal(&c->locals, name)) != NULL) {
         node->u.symbolRef.symbol = symbol;
         node->u.symbolRef.fcn = code_local;
     }
 
     /* handle function arguments */
-    else if (c->codeType != CODE_TYPE_MAIN && (symbol = FindArgument(c, name)) != NULL) {
+    else if (c->codeType != CODE_TYPE_MAIN && (symbol = FindLocal(&c->arguments, name)) != NULL) {
         node->u.symbolRef.symbol = symbol;
         node->u.symbolRef.fcn = code_local;
     }
 
     /* handle global symbols */
-    else if ((symbol = FindGlobal(c, c->token)) != NULL) {
+    else if ((symbol = FindGlobal(c->heap, c->token)) != NULL) {
         Symbol *sym = GetSymbolPtr(symbol);
         if (IsConstant(sym)) {
             if (IsHandleType(sym->type)) {
@@ -510,7 +510,7 @@ ParseTreeNode *GetSymbolRef(ParseContext *c, char *name)
 
     /* handle undefined symbols */
     else {
-        symbol = AddGlobal(c, name, SC_VARIABLE, DefaultType(c, name));
+        symbol = AddGlobal(c->heap, name, SC_VARIABLE, DefaultType(c, name));
         node->u.symbolRef.symbol = symbol;
         node->u.symbolRef.fcn = code_global;
     }
@@ -570,13 +570,19 @@ VMHANDLE DefaultType(ParseContext *c, const char *name)
     VMHANDLE type;
     switch (name[strlen(name) - 1]) {
     case '$':
-        type = CommonType(c, stringType);
+        type = CommonType(c->heap, stringType);
         break;
     default:
-        type = CommonType(c, integerType);
+        type = CommonType(c->heap, integerType);
         break;
     }
     return type;
+}
+
+/* IsConstant - check to see if the value of a symbol is a constant */
+int IsConstant(Symbol *symbol)
+{
+    return symbol->storageClass == SC_CONSTANT;
 }
 
 /* IsIntegerLit - check to see if a node is an integer literal */

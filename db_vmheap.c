@@ -39,17 +39,34 @@ static char *typeNames[] = {
     "Intrinsic"
 };
 
+DefIntrinsic(abs);
+DefIntrinsic(rnd);
+DefIntrinsic(left);
+DefIntrinsic(right);
+DefIntrinsic(mid);
+DefIntrinsic(chr);
+DefIntrinsic(str);
+DefIntrinsic(val);
+DefIntrinsic(asc);
+DefIntrinsic(len);
+DefIntrinsic(printStr);
+DefIntrinsic(printInt);
+DefIntrinsic(printTab);
+DefIntrinsic(printNL);
+DefIntrinsic(printFlush);
+
 /* local functions */
 static void ObjRelease1(ObjHeap *heap, VMHANDLE stack);
 static VMHANDLE DereferenceAndMaybePushObject(VMHANDLE stack, VMHANDLE object);
 static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size);
 
 /* InitHeap - initialize a heap */
-ObjHeap *InitHeap(uint8_t *data, size_t size, int nHandles)
+ObjHeap *InitHeap(System *sys, size_t size, int nHandles)
 {
     size_t overheadSize, dataSize;
-    ObjHeap *heap = (ObjHeap *)data;
     VMHANDLE handle;
+    ObjHeap *heap;
+    uint8_t *data;
     int cnt;
     
     /* get the size of the header plus the handle table */
@@ -59,6 +76,11 @@ ObjHeap *InitHeap(uint8_t *data, size_t size, int nHandles)
     if (size <= overheadSize)
         return NULL;
     dataSize = size - overheadSize;
+
+    /* allocate and initialize the parse context */
+    if (!(data = (uint8_t *)AllocateFreeSpace(sys, size)))
+        return NULL;
+    heap = (ObjHeap *)data;
 
     /* setup the heap header */
     data += sizeof(ObjHeap);
@@ -78,8 +100,206 @@ ObjHeap *InitHeap(uint8_t *data, size_t size, int nHandles)
     /* setup the heap */
     heap->data = heap->free = data;
     
+    /* initialize the global symbol table */
+    InitSymbolTable(&heap->globals);
+
+    /* initialize the common types */
+    InitCommonType(heap, integerType, TYPE_INTEGER);
+    InitCommonType(heap, integerArrayType, TYPE_ARRAY);
+    heap->integerArrayType.type.u.arrayInfo.elementType = CommonType(heap, integerType);
+    InitCommonType(heap, byteType, TYPE_BYTE);
+    InitCommonType(heap, byteArrayType, TYPE_ARRAY);
+    heap->byteArrayType.type.u.arrayInfo.elementType = CommonType(heap, byteType);
+    InitCommonType(heap, stringType,TYPE_STRING);
+    InitCommonType(heap, stringArrayType, TYPE_ARRAY);
+    heap->stringArrayType.type.u.arrayInfo.elementType = CommonType(heap, stringType);
+
+    /* add the intrinsic functions */
+    AddIntrinsic(heap, "ABS",          abs,        "i=i")
+    AddIntrinsic(heap, "RND",          rnd,        "i=i")
+    AddIntrinsic(heap, "LEFT$",        left,       "s=si")
+    AddIntrinsic(heap, "RIGHT$",       right,      "s=si")
+    AddIntrinsic(heap, "MID$",         mid,        "s=sii")
+    AddIntrinsic(heap, "CHR$",         chr,        "s=i")
+    AddIntrinsic(heap, "STR$",         str,        "s=i")
+    AddIntrinsic(heap, "VAL",          val,        "i=s")
+    AddIntrinsic(heap, "ASC",          asc,        "i=s")
+    AddIntrinsic(heap, "LEN",          len,        "i=s")
+    AddIntrinsic(heap, "printStr",     printStr,   "is")
+    AddIntrinsic(heap, "printInt",     printInt,   "ii")
+    AddIntrinsic(heap, "printTab",     printTab,   "i")
+    AddIntrinsic(heap, "printNL",      printNL,    "i")
+    AddIntrinsic(heap, "printFlush",   printFlush, "i")
+
     /* return the newly initialized heap */
     return heap;
+}
+
+/* InitSymbolTable - initialize a symbol table */
+void InitSymbolTable(SymbolTable *table)
+{
+    table->head = NULL;
+    table->tail = NULL;
+    table->count = 0;
+}
+
+/* AddGlobal - add a global symbol to the symbol table */
+VMHANDLE AddGlobal(ObjHeap *heap, const char *name, StorageClass storageClass, VMHANDLE type)
+{
+    VMHANDLE symbol;
+    
+    /* allocate the symbol object */
+    if (!(symbol = NewSymbol(heap, name, storageClass, type)))
+        return NULL;
+        
+    /* add it to the symbol table */
+    if (heap->globals.tail == NULL)
+        heap->globals.head = heap->globals.tail = symbol;
+    else {
+        Symbol *last = GetSymbolPtr(heap->globals.tail);
+        heap->globals.tail = symbol;
+        last->next = symbol;
+    }
+    ++heap->globals.count;
+    
+    /* return the symbol */
+    return symbol;
+}
+
+/* FindGlobal - find a symbol in the global symbol table */
+VMHANDLE FindGlobal(ObjHeap *heap, const char *name)
+{
+    VMHANDLE symbol = heap->globals.head;
+    while (symbol) {
+        Symbol *sym = GetSymbolPtr(symbol);
+        if (strcasecmp(name, sym->name) == 0)
+            return symbol;
+        symbol = sym->next;
+    }
+    return NULL;
+}
+
+/* DumpGlobals - dump the global symbol table */
+void DumpGlobals(ObjHeap *heap)
+{
+    VMHANDLE symbol = heap->globals.head;
+    if (symbol) {
+        VM_printf("Globals:\n");
+        while (symbol) {
+            Symbol *sym = GetSymbolPtr(symbol);
+            VM_printf("  %s %04x\n", sym->name, sym->v.iValue);
+            symbol = sym->next;
+        }
+    }
+}
+
+/* AddLocal - add a symbol to a local symbol table */
+VMHANDLE AddLocal(ObjHeap *heap, SymbolTable *table, const char *name, VMHANDLE type, VMVALUE offset)
+{
+    VMHANDLE local;
+    
+    /* allocate the local symbol object */
+    if (!(local = NewLocal(heap, name, type, offset)))
+        return NULL;
+        
+    /* add it to the symbol table */
+    if (table->tail == NULL)
+        table->head = table->tail = local;
+    else {
+        Local *last = GetLocalPtr(table->tail);
+        table->tail = local;
+        last->next = local;
+    }
+    ++table->count;
+    
+    /* return the symbol */
+    return local;
+}
+
+/* FindLocal - find a local symbol in a symbol table */
+VMHANDLE FindLocal(SymbolTable *table, const char *name)
+{
+    VMHANDLE local = table->head;
+    while (local) {
+        Local *sym = GetLocalPtr(local);
+        if (strcasecmp(name, sym->name) == 0)
+            return local;
+        local = sym->next;
+    }
+    return NULL;
+}
+
+/* DumpLocals - dump a local symbol table */
+void DumpLocals(SymbolTable *table, const char *tag)
+{
+    VMHANDLE symbol;
+    if ((symbol = table->head) != NULL) {
+        VM_printf("%s:\n", tag);
+        while (symbol) {
+            Local *sym = GetLocalPtr(symbol);
+            VM_printf("  %s %d\n", sym->name, sym->offset);
+            symbol = sym->next;
+        }
+    }
+}
+
+/* AddIntrinsic1 - add an intrinsic function to the global symbol table */
+int AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler)
+{
+    int argumentCount, handleArgumentCount;
+    VMHANDLE symbol, type, argType;
+    SymbolTable arguments;
+    Type *typ;
+    
+    /* make the function type */
+    type = NewType(heap, TYPE_FUNCTION);
+    typ = GetTypePtr(type);
+    InitSymbolTable(&arguments);
+    
+    /* set the return type */
+    switch (*types++) {
+    case 'i':
+        typ->u.functionInfo.returnType = CommonType(heap, integerType);
+        break;
+    case 's':
+        typ->u.functionInfo.returnType = CommonType(heap, stringType);
+        break;
+    default:
+        return VMFALSE;
+    }
+    
+    /* initialize the argument counts */
+    argumentCount = handleArgumentCount = 0;
+    
+    /* add the argument types */
+    if (*types++ == '=') {
+        while (*types) {
+            switch (*types++) {
+            case 'i':
+                argType = CommonType(heap, integerType);
+                ++argumentCount;
+                break;
+            case 's':
+                argType = CommonType(heap, stringType);
+                ++handleArgumentCount;
+                break;
+            default:
+                return VMFALSE;
+            }
+            AddLocal(heap, &arguments, "", argType, 0);
+        }
+    }
+
+    /* add a global symbol for the intrinsic function */
+    symbol = AddGlobal(heap, name, SC_CONSTANT, type);
+    GetSymbolPtr(symbol)->v.hValue = handler;
+
+    /* store the argument symbol table */
+    typ = GetTypePtr(type);
+    typ->u.functionInfo.arguments = arguments;
+    
+    /* return successfully */
+    return VMTRUE;
 }
 
 /* NewSymbol - create a new symbol object */

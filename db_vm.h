@@ -12,6 +12,7 @@
 #include <setjmp.h>
 #include "db_types.h"
 #include "db_image.h"
+#include "db_system.h"
 
 /* forward type declarations */
 typedef struct Interpreter Interpreter;

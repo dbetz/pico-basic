@@ -62,17 +62,6 @@ static int LiteralChar(ParseContext *c);
 static int SkipComment(ParseContext *c);
 static int XGetC(ParseContext *c);
 
-/* GetLine - get the next input line */
-int GetLine(ParseContext *c)
-{
-    VMVALUE lineNumber;
-    if (!(*c->getLine)(c->getLineCookie, c->sys->lineBuf, sizeof(c->sys->lineBuf), &lineNumber))
-        return VMFALSE;
-    c->lineNumber = lineNumber;
-    c->sys->linePtr = c->sys->lineBuf;
-    return VMTRUE;
-}
-
 /* FRequire - fetch a token and check it */
 void FRequire(ParseContext *c, Token requiredToken)
 {
@@ -630,7 +619,7 @@ void ParseError(ParseContext *c, const char *fmt, ...)
     va_end(ap);
 
     /* show the context */
-    VM_printf("  line %d\n", c->lineNumber);
+    VM_printf("  line %d\n", c->sys->lineNumber);
     VM_printf("    %s\n", c->sys->lineBuf);
     VM_printf("    %*s\n", c->tokenOffset, "^");
 

@@ -107,6 +107,25 @@ typedef struct {
 } IntrinsicFunction;
 
 /* initialize a common type field */
+#define InitCommonType(c, field, typeid)                \
+            (c)->field.type.id = typeid;                \
+            (c)->field.data = (void *)&(c)->field.type; \
+            (c)->field.hdr.handle = NULL;               \
+            (c)->field.hdr.refCnt = 0;                  \
+            (c)->field.hdr.type = ObjTypeType;          \
+            (c)->field.hdr.size = sizeof(Type);
+
+/* get a handle to one of the common types */
+#define CommonType(c, field)        (&(c)->field.data)
+
+/* add an intrinsic function to the symbol table */
+#define AddIntrinsic(c, name, id, types)                            \
+            {                                                       \
+                id##_struct.data = (void *)&id##_struct.handler;    \
+                AddIntrinsic1(c, name, types, IntrinsicHandle(id)); \
+            }
+
+/* initialize a common type field */
 #define DefIntrinsic(name)                                                      \
             IntrinsicHandler fcn_##name;                                        \
             static IntrinsicFunction name##_struct = {                          \
@@ -143,16 +162,31 @@ typedef struct {
 
 /* heap structure */
 typedef struct {
-    int nHandles;           /* number of handles */
-    VMHANDLE handles;       /* array of handles */
-    VMHANDLE endHandles;    /* end of the array of handles */
-    VMHANDLE freeHandles;   /* list of free handles */
-    uint8_t *data;          /* heap data */
-    uint8_t *free;          /* next free heap location */
+    int nHandles;                   /* number of handles */
+    VMHANDLE handles;               /* array of handles */
+    VMHANDLE endHandles;            /* end of the array of handles */
+    VMHANDLE freeHandles;           /* list of free handles */
+    uint8_t *data;                  /* heap data */
+    uint8_t *free;                  /* next free heap location */
+    SymbolTable globals;            /* global variables and constants */
+    ConstantType integerType;       /* integer type */
+    ConstantType integerArrayType;  /* integer array type */
+    ConstantType byteType;          /* byte type */
+    ConstantType byteArrayType;     /* byte array type */
+    ConstantType stringType;        /* string type */
+    ConstantType stringArrayType;   /* string array type */
 } ObjHeap;
 
 /* prototypes */
-ObjHeap *InitHeap(uint8_t *data, size_t size, int nHandles);
+ObjHeap *InitHeap(System *sys, size_t heapSize, int nHandles);
+void InitSymbolTable(SymbolTable *table);
+VMHANDLE AddGlobal(ObjHeap *heap, const char *name, StorageClass storageClass, VMHANDLE type);
+VMHANDLE FindGlobal(ObjHeap *heap, const char *name);
+void DumpGlobals(ObjHeap *heap);
+VMHANDLE AddLocal(ObjHeap *heap, SymbolTable *table, const char *name, VMHANDLE type, VMVALUE offset);
+VMHANDLE FindLocal(SymbolTable *table, const char *name);
+void DumpLocals(SymbolTable *table, const char *tag);
+int AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler);
 VMHANDLE NewSymbol(ObjHeap *heap, const char *name, StorageClass storageClass, VMHANDLE type);
 VMHANDLE NewLocal(ObjHeap *heap, const char *name, VMHANDLE type, VMVALUE offset);
 VMHANDLE NewType(ObjHeap *heap, TypeID id);

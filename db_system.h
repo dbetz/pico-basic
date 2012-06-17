@@ -14,6 +14,10 @@
 
 /* system context */
 typedef struct {
+    int (*getLine)(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
+                                    /* function to get a line of input */
+    void *getLineCookie;            /* cookie for the getLine function */
+    int lineNumber;                 /* current line number */
     uint8_t *freeSpace;             /* base of free space */
     uint8_t *freeNext;              /* next free space available */
     uint8_t *freeTop;               /* top of free space */
@@ -23,5 +27,9 @@ typedef struct {
 
 System *InitSystem(uint8_t *freeSpace, size_t freeSize);
 uint8_t *AllocateFreeSpace(System *sys, size_t size);
+int GetLine(System *sys);
+
+void VM_printf(const char *fmt, ...);
+void VM_putchar(int ch);
 
 #endif

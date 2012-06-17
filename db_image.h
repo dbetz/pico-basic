@@ -82,7 +82,4 @@
 #error Only 16 bit and 32 bit alignment is currently supported.
 #endif
 
-void VM_printf(const char *fmt, ...);
-void VM_putchar(int ch);
-
 #endif

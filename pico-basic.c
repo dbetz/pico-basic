@@ -2,23 +2,53 @@
 #include "db_compiler.h"
 #include "db_vm.h"
 
-static DATA_SPACE uint8_t space[HEAPSIZE];
+static DATA_SPACE uint8_t space[HEAPSIZE*2];
 
 DefIntrinsic(dump);
+static void repl(System *sys, ObjHeap *heap);
 
-static void repl(System *sys);
+static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
 
 int main(int argc, char *argv[])
 {
+    VMVALUE lineNumber = 0;
+    ObjHeap *heap;
     System *sys;
     
     VM_sysinit(argc, argv);
 
     sys = InitSystem(space, sizeof(space));
-
-    repl(sys);
+    sys->getLine = TermGetLine;
+    sys->getLineCookie = &lineNumber;
+    
+    if (!(heap = InitHeap(sys, HEAPSIZE, MAXOBJECTS)))
+        return 1;
+        
+    repl(sys, heap);
     
     return 0;
+}
+
+static void repl(System *sys, ObjHeap *heap)
+{
+    uint8_t *freeMark = sys->freeNext;
+
+    AddIntrinsic(heap, "DUMP",          dump,        "i")
+
+    for (;;) {
+        VMHANDLE code;
+        sys->freeNext = freeMark;
+        if ((code = Compile(sys, heap, VMTRUE)) != NULL) {
+            Interpreter *i = (Interpreter *)sys->freeNext;
+            size_t stackSize = (sys->freeTop - freeMark - sizeof(Interpreter)) / sizeof(VMVALUE);
+            if (stackSize <= 0)
+                VM_printf("insufficient memory\n");
+            else {
+                InitInterpreter(i, heap, stackSize);
+                Execute(i, code);
+            }
+        }
+    }
 }
 
 static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber)
@@ -26,33 +56,6 @@ static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber)
     VMVALUE *pLine = (VMVALUE *)cookie;
     *pLineNumber = ++(*pLine);
     return fgets(buf, len, stdin) != NULL;
-}
-
-static void repl(System *sys)
-{
-    ParseContext *c;
-    sys->freeNext = sys->freeSpace;
-    if (!(c = InitCompiler(sys, MAXOBJECTS)))
-        VM_printf("insufficient memory\n");
-    else {
-        AddIntrinsic(c, "DUMP",          dump,        "i")
-        for (;;) {
-            VMVALUE lineNumber = 0;
-            VMHANDLE code;
-            c->getLine = TermGetLine;
-            c->getLineCookie = &lineNumber;
-            if ((code = Compile(c, VMTRUE)) != NULL) {
-                Interpreter *i = (Interpreter *)sys->freeNext;
-                size_t stackSize = (sys->freeTop - sys->freeNext - sizeof(Interpreter)) / sizeof(VMVALUE);
-                if (stackSize <= 0)
-                    VM_printf("insufficient memory\n");
-                else {
-                    InitInterpreter(i, c->heap, stackSize);
-                    Execute(i, code);
-                }
-            }
-        }
-    }
 }
 
 void fcn_dump(Interpreter *i)

@@ -13,81 +13,20 @@
 #include "db_compiler.h"
 #include "db_vmdebug.h"
 #include "db_vm.h"
-
-static DATA_SPACE uint8_t heap_space[4096];
-
-DefIntrinsic(abs);
-DefIntrinsic(rnd);
-DefIntrinsic(left);
-DefIntrinsic(right);
-DefIntrinsic(mid);
-DefIntrinsic(chr);
-DefIntrinsic(str);
-DefIntrinsic(val);
-DefIntrinsic(asc);
-DefIntrinsic(len);
-DefIntrinsic(printStr);
-DefIntrinsic(printInt);
-DefIntrinsic(printTab);
-DefIntrinsic(printNL);
-DefIntrinsic(printFlush);
-
-/* InitCompiler - initialize the compiler and create a parse context */
-ParseContext *InitCompiler(System *sys, int maxObjects)
+        
+/* Compile - compile a program */
+VMHANDLE Compile(System *sys, ObjHeap *heap, int oneStatement)
 {
+    int prompt = VMFALSE;
     ParseContext *c;
+    
 
     /* allocate and initialize the parse context */
     if (!(c = (ParseContext *)AllocateFreeSpace(sys, sizeof(ParseContext))))
         return NULL;
     memset(c, 0, sizeof(ParseContext));
-    
-    /* initialize free space */
     c->sys = sys;
-    c->freeMark = sys->freeNext;
-    
-    c->heap = InitHeap(heap_space, sizeof(heap_space), 128);
-        
-    /* initialize the common types */
-    InitCommonType(c, integerType, TYPE_INTEGER);
-    InitCommonType(c, integerArrayType, TYPE_ARRAY);
-    c->integerArrayType.type.u.arrayInfo.elementType = CommonType(c, integerType);
-    InitCommonType(c, byteType, TYPE_BYTE);
-    InitCommonType(c, byteArrayType, TYPE_ARRAY);
-    c->byteArrayType.type.u.arrayInfo.elementType = CommonType(c, byteType);
-    InitCommonType(c, stringType,TYPE_STRING);
-    InitCommonType(c, stringArrayType, TYPE_ARRAY);
-    c->stringArrayType.type.u.arrayInfo.elementType = CommonType(c, stringType);
-
-    /* initialize the global symbol table */
-    InitSymbolTable(&c->globals);
-
-    /* add the intrinsic functions */
-    AddIntrinsic(c, "ABS",          abs,        "i=i")
-    AddIntrinsic(c, "RND",          rnd,        "i=i")
-    AddIntrinsic(c, "LEFT$",        left,       "s=si")
-    AddIntrinsic(c, "RIGHT$",       right,      "s=si")
-    AddIntrinsic(c, "MID$",         mid,        "s=sii")
-    AddIntrinsic(c, "CHR$",         chr,        "s=i")
-    AddIntrinsic(c, "STR$",         str,        "s=i")
-    AddIntrinsic(c, "VAL",          val,        "i=s")
-    AddIntrinsic(c, "ASC",          asc,        "i=s")
-    AddIntrinsic(c, "LEN",          len,        "i=s")
-    AddIntrinsic(c, "printStr",     printStr,   "is")
-    AddIntrinsic(c, "printInt",     printInt,   "ii")
-    AddIntrinsic(c, "printTab",     printTab,   "i")
-    AddIntrinsic(c, "printNL",      printNL,    "i")
-    AddIntrinsic(c, "printFlush",   printFlush, "i")
-
-    /* return the new parse context */
-    return c;
-}
-
-/* Compile - compile a program */
-VMHANDLE Compile(ParseContext *c, int oneStatement)
-{
-    System *sys = c->sys;
-    int prompt = VMFALSE;
+    c->heap = heap;
     
     /* setup an error target */
     if (setjmp(c->errorTarget) != 0)
@@ -124,7 +63,7 @@ VMHANDLE Compile(ParseContext *c, int oneStatement)
             VM_printf("  > ");
             
         /* get the next line */
-        if (!GetLine(c))
+        if (!GetLine(c->sys))
             return NULL;
             
         /* prompt on continuation lines */
@@ -141,18 +80,15 @@ VMHANDLE Compile(ParseContext *c, int oneStatement)
     
     /* write the main code */
     InitSymbolTable(&c->arguments);
-    StartCode(c, "main", CODE_TYPE_MAIN);
+    StartCode(c, "main", CODE_TYPE_MAIN, NULL);
     StoreCode(c);
-
-    /* free up the space the compiler was consuming */
-    sys->freeNext = c->freeMark;
 
     /* return the main code object */
     return c->code;
 }
 
 /* StartCode - start a function under construction */
-void StartCode(ParseContext *c, char *name, CodeType type)
+void StartCode(ParseContext *c, char *name, CodeType type, VMHANDLE returnType)
 {
     /* all functions must precede or follow the main code */
     if (type != CODE_TYPE_MAIN && c->cptr > c->codeBuf)
@@ -170,6 +106,7 @@ void StartCode(ParseContext *c, char *name, CodeType type)
     c->localOffset = -F_SIZE - 1;
     c->handleLocalOffset = HF_SIZE + 1;
     c->codeType = type;
+    c->returnType = returnType;
     
     /* write the code prolog */
     if (type != CODE_TYPE_MAIN) {
@@ -207,7 +144,7 @@ void StoreCode(ParseContext *c)
         }
         fixupbranch(c, c->returnFixups, codeaddr(c));
         if (c->codeType == CODE_TYPE_FUNCTION)
-            putcbyte(c, OP_RETURN); // BUG: need to check for OP_RETURNH
+            putcbyte(c, IsHandleType(c->returnType) ? OP_RETURNH : OP_RETURN);
         else
             putcbyte(c, OP_RETURNV);
         putcbyte(c, c->argumentCount);
@@ -223,7 +160,7 @@ void StoreCode(ParseContext *c)
 #if 1
     VM_printf("%s:\n", c->codeName);
     DecodeFunction(0, c->codeBuf, codeSize);
-    DumpLocals(c);
+    DumpLocalVariables(c);
     VM_putchar('\n');
 #endif
 
@@ -241,61 +178,11 @@ void StoreCode(ParseContext *c)
     c->cptr = c->codeBuf;
 }
 
-/* AddIntrinsic1 - add an intrinsic function to the global symbol table */
-void AddIntrinsic1(ParseContext *c, char *name, char *types, VMHANDLE handler)
+/* DumpLocalVariables - dump a local symbol table */
+void DumpLocalVariables(ParseContext *c)
 {
-    int argumentCount, handleArgumentCount;
-    VMHANDLE symbol, type, argType;
-    Type *typ;
-    
-    /* make the function type */
-    type = NewType(c->heap, TYPE_FUNCTION);
-    typ = GetTypePtr(type);
-    InitSymbolTable(&c->arguments);
-    
-    /* set the return type */
-    switch (*types++) {
-    case 'i':
-        typ->u.functionInfo.returnType = CommonType(c, integerType);
-        break;
-    case 's':
-        typ->u.functionInfo.returnType = CommonType(c, stringType);
-        break;
-    default:
-        Fatal(c, "unknown return type");
-        break;
-    }
-    
-    /* initialize the argument counts */
-    argumentCount = handleArgumentCount = 0;
-    
-    /* add the argument types */
-    if (*types++ == '=') {
-        while (*types) {
-            switch (*types++) {
-            case 'i':
-                argType = CommonType(c, integerType);
-                ++argumentCount;
-                break;
-            case 's':
-                argType = CommonType(c, stringType);
-                ++handleArgumentCount;
-                break;
-            default:
-                Fatal(c, "unknown argument type");
-                break;
-            }
-            AddArgument(c, "", argType, 0);
-        }
-    }
-
-    /* add a global symbol for the intrinsic function */
-    symbol = AddGlobal(c, name, SC_CONSTANT, type);
-    GetSymbolPtr(symbol)->v.hValue = handler;
-
-    /* store the argument symbol table */
-    typ = GetTypePtr(type);
-    typ->u.functionInfo.arguments = c->arguments;
+    DumpLocals(&c->arguments, "arguments");
+    DumpLocals(&c->locals, "locals");
 }
 
 /* LocalAlloc - allocate memory from the local heap */
@@ -309,18 +196,6 @@ void *LocalAlloc(ParseContext *c, size_t size)
     p = c->nextLocal;
     c->nextLocal += size;
     return p;
-}
-
-/* VM_printf - formatted print */
-void VM_printf(const char *fmt, ...)
-{
-    char buf[100], *p = buf;
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    while (*p != '\0')
-        VM_putchar(*p++);
-    va_end(ap);
 }
 
 /* Fatal - report a fatal error and exit */

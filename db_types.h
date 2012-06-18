@@ -14,14 +14,24 @@
 #define VMTRUE      1
 #define VMFALSE     0
 
-/* compiler heap size */
+/* runtime heap size */
 #ifndef HEAPSIZE
-#define HEAPSIZE            (4 * 1024)
+#define HEAPSIZE            (8 * 1024)
 #endif
 
 /* maximum number of runtime objects */
 #ifndef MAXOBJECTS
 #define MAXOBJECTS          128
+#endif
+
+/* compiler heap size */
+#ifndef COMPILERHEAPSIZE
+#define COMPILERHEAPSIZE    (4 * 1024)
+#endif
+
+/* compiler code buffer size */
+#ifndef MAXCODE
+#define MAXCODE             1024
 #endif
 
 /* compiler scratch buffer size */

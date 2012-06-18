@@ -77,33 +77,17 @@ struct Interpreter {
 /* prototypes */
 void StackOverflow(Interpreter *i);
 
-extern FLASH_SPACE char str_null[];
-extern FLASH_SPACE char str_open_failed_err[];
-extern FLASH_SPACE char str_run_failed_err[];
-extern FLASH_SPACE char str_load_failed_err[];
-extern FLASH_SPACE char str_string_index_range_err[];
-extern FLASH_SPACE char str_no_heap_err[];
-extern FLASH_SPACE char str_no_heap_handles_err[];
-extern FLASH_SPACE char str_no_heap_space_err[];
-extern FLASH_SPACE char str_heap_debug_output[];
-extern FLASH_SPACE char str_heap_debug_output_tail[];
-extern FLASH_SPACE char str_array_subscript_err[];
-extern FLASH_SPACE char str_array_subscript1_err[];
-extern FLASH_SPACE char str_array_subscript2_err[];
-extern FLASH_SPACE char str_image_header_err[];
-extern FLASH_SPACE char str_image_target_err[];
-extern FLASH_SPACE char str_data_space_err[];
-extern FLASH_SPACE char str_opcode_err[];
+extern FLASH_SPACE char str_subscript_err[];
 extern FLASH_SPACE char str_stack_overflow_err[];
-extern FLASH_SPACE char str_object_number_err[];
-extern FLASH_SPACE char str_tag_not_found_err[];
 extern FLASH_SPACE char str_not_code_object_err[];
-extern FLASH_SPACE char str_argument_count_err[];
-extern FLASH_SPACE char str_wrong_type_err[];
-extern FLASH_SPACE char str_warn_prefix[];
+extern FLASH_SPACE char str_opcode_err[];
+extern FLASH_SPACE char str_value_fmt[];
 extern FLASH_SPACE char str_abort_prefix[];
-extern FLASH_SPACE char str_program_id[];
-extern FLASH_SPACE char str_ready_for_download[];
+extern FLASH_SPACE char str_hfp_tag[];
+extern FLASH_SPACE char str_hstack_entry_fmt[];
+extern FLASH_SPACE char str_stack_separator[];
+extern FLASH_SPACE char str_fp_tag[];
+extern FLASH_SPACE char str_stack_entry[];
 
 /* prototypes from db_vmint.c */
 uint8_t *InitInterpreter(Interpreter *i, ObjHeap *heap, size_t stackSize);

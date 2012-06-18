@@ -63,7 +63,7 @@ void fcn_mid(Interpreter *i)
     start = i->sp[2];
     n = i->sp[3];
     if (start < 0 || start >= len)
-        Abort(i, str_string_index_range_err, start + 1);
+        Abort(i, str_subscript_err, start + 1);
     if (start + n > len)
         n = len - start;
     i->sp[3] = (VMVALUE)StoreByteVector(i->heap, ObjTypeString, str + start, n);
@@ -81,7 +81,7 @@ void fcn_chr(Interpreter *i)
 void fcn_str(Interpreter *i)
 {
     char buf[32];
-    snprintf(buf, sizeof(buf), "%d", i->sp[1]);
+    snprintf(buf, sizeof(buf), str_value_fmt, i->sp[1]);
     i->sp[1] = (VMVALUE)StoreByteVector(i->heap, ObjTypeString, (uint8_t *)buf, strlen(buf));
 }
 
@@ -223,7 +223,7 @@ void fcn_printStr(Interpreter *i)
 /* fcn_printInt - printInt(n): print an integer */
 void fcn_printInt(Interpreter *i)
 {
-    VM_printf("%d", i->sp[0]);
+    VM_printf(str_value_fmt, i->sp[0]);
     Drop(i, 1);
 }
 

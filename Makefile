@@ -8,12 +8,11 @@ db_scan.o \
 db_generate.o
 
 RUNTIME_OBJS = \
-db_strings.o \
-db_system.o \
-db_vmdebug.o \
+db_vmint.o \
 db_vmfcn.o \
 db_vmheap.o \
-db_vmint.o \
+db_vmdebug.o \
+db_system.o \
 osint_posix.o
 
 OBJS = pico-basic.o $(COMPILER_OBJS) $(RUNTIME_OBJS)

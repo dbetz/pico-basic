@@ -14,36 +14,6 @@
 #define VMTRUE      1
 #define VMFALSE     0
 
-/* runtime heap size */
-#ifndef HEAPSIZE
-#define HEAPSIZE            (8 * 1024)
-#endif
-
-/* maximum number of runtime objects */
-#ifndef MAXOBJECTS
-#define MAXOBJECTS          128
-#endif
-
-/* compiler heap size */
-#ifndef COMPILERHEAPSIZE
-#define COMPILERHEAPSIZE    (4 * 1024)
-#endif
-
-/* compiler code buffer size */
-#ifndef MAXCODE
-#define MAXCODE             1024
-#endif
-
-/* compiler scratch buffer size */
-#ifndef SCRATCHBUFSIZE
-#define SCRATCHBUFSIZE      1500
-#endif
-
-/* edit buffer size */
-#ifndef EDITBUFSIZE
-#define EDITBUFSIZE         1500
-#endif
-
 /*******/
 /* MAC */
 /*******/
@@ -231,5 +201,29 @@ struct VMDIRENT {
 };
 
 #endif // ANSI_FILE_IO
+
+/************/
+/* DEFAULTS */
+/************/
+
+/* workspace size */
+#ifndef WORKSPACESIZE
+#define WORKSPACESIZE       (8 * 1024)
+#endif
+
+/* runtime heap size */
+#ifndef HEAPSIZE
+#define HEAPSIZE            (4 * 1024)
+#endif
+
+/* maximum number of runtime objects */
+#ifndef MAXOBJECTS
+#define MAXOBJECTS          128
+#endif
+
+/* compiler code buffer size */
+#ifndef MAXCODE
+#define MAXCODE             1024
+#endif
 
 #endif

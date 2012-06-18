@@ -1,5 +1,16 @@
 NAME = pico-basic
 
+HDRS = \
+db_compiler.h \
+db_edit.h \
+db_image.h \
+db_inttypes.h \
+db_system.h \
+db_types.h \
+db_vm.h \
+db_vmdebug.h \
+db_vmheap.h
+
 COMPILER_OBJS = \
 db_compiler.o \
 db_statement.o \
@@ -23,7 +34,7 @@ LDFLAGS = $(CFLAGS)
 $(NAME): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
-%.o: %.c
+%.o: %.c $(HDRS)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:

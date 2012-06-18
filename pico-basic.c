@@ -2,7 +2,7 @@
 #include "db_compiler.h"
 #include "db_vm.h"
 
-static DATA_SPACE uint8_t space[HEAPSIZE*2];
+static DATA_SPACE uint8_t space[WORKSPACESIZE];
 
 DefIntrinsic(dump);
 static void repl(System *sys, ObjHeap *heap);

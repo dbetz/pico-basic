@@ -20,11 +20,6 @@
 
 /* program limits */
 #define MAXTOKEN        32
-#if 0
-#define MAXCODE         32768
-#else
-#define MAXCODE         1024
-#endif
 
 /* forward type declarations */
 typedef struct ParseTreeNode ParseTreeNode;

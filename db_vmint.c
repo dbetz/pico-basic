@@ -16,12 +16,6 @@ static void StartCode(Interpreter *i);
 static void PopFrame(Interpreter *i);
 static void StringCat(Interpreter *i);
 
-/* InitInterpreter - initialize the interpreter */
-uint8_t *InitInterpreter(Interpreter *i)
-{
-    return (uint8_t *)i->stackTop;
-}
-
 /* Execute - execute the main code */
 int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
 {

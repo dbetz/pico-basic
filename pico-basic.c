@@ -5,13 +5,13 @@
 static DATA_SPACE uint8_t space[WORKSPACESIZE];
 
 DefIntrinsic(dump);
-static void repl(System *sys, ObjHeap *heap);
 
 static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
 
 int main(int argc, char *argv[])
 {
     VMVALUE lineNumber = 0;
+    uint8_t *freeMark;
     ObjHeap *heap;
     System *sys;
     
@@ -24,31 +24,20 @@ int main(int argc, char *argv[])
     if (!(heap = InitHeap(sys, HEAPSIZE, MAXOBJECTS)))
         return 1;
         
-    repl(sys, heap);
-    
-    return 0;
-}
-
-static void repl(System *sys, ObjHeap *heap)
-{
-    uint8_t *freeMark = sys->freeNext;
-
     AddIntrinsic(heap, "DUMP",          dump,        "i")
 
+    freeMark = sys->freeNext;
+     
     for (;;) {
         VMHANDLE code;
         sys->freeNext = freeMark;
         if ((code = Compile(sys, heap, VMTRUE)) != NULL) {
-            Interpreter *i = (Interpreter *)sys->freeNext;
-            size_t stackSize = (sys->freeTop - freeMark - sizeof(Interpreter)) / sizeof(VMVALUE);
-            if (stackSize <= 0)
-                VM_printf("insufficient memory\n");
-            else {
-                InitInterpreter(i, heap, stackSize);
-                Execute(i, code);
-            }
+            sys->freeNext = freeMark;
+            Execute(sys, heap, code);
         }
     }
+    
+    return 0;
 }
 
 static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber)

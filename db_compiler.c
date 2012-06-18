@@ -157,7 +157,7 @@ void StoreCode(ParseContext *c)
     /* determine the code size */
     codeSize = (int)(c->cptr - c->codeBuf);
 
-#if 1
+#if 0
     VM_printf("%s:\n", c->codeName);
     DecodeFunction(0, c->codeBuf, codeSize);
     DumpLocalVariables(c);

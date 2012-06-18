@@ -90,8 +90,7 @@ extern FLASH_SPACE char str_fp_tag[];
 extern FLASH_SPACE char str_stack_entry[];
 
 /* prototypes from db_vmint.c */
-uint8_t *InitInterpreter(Interpreter *i, ObjHeap *heap, size_t stackSize);
-int Execute(Interpreter *i, VMHANDLE main);
+int Execute(System *sys, ObjHeap *heap, VMHANDLE main);
 void Warn(const char *fmt, ...);                    /* fmt in FLASH_SPACE */
 void Abort(Interpreter *i, const char *fmt, ...);   /* fmt in FLASH_SPACE */
 

@@ -17,22 +17,34 @@ static void PopFrame(Interpreter *i);
 static void StringCat(Interpreter *i);
 
 /* InitInterpreter - initialize the interpreter */
-uint8_t *InitInterpreter(Interpreter *i, ObjHeap *heap, size_t stackSize)
+uint8_t *InitInterpreter(Interpreter *i)
 {
-    i->heap = heap;
-    i->stack = (VMVALUE *)((uint8_t *)i + sizeof(Interpreter));
-    i->stackTop = i->stack + stackSize;
     return (uint8_t *)i->stackTop;
 }
 
 /* Execute - execute the main code */
-int Execute(Interpreter *i, VMHANDLE main)
+int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
 {
+    size_t stackSize;
+    Interpreter *i;
     VMVALUE tmp, tmp2, ind;
     VMHANDLE obj, htmp;
     int8_t tmpb;
 
-    /* initialize */
+    /* allocate the interpreter state */
+    if (!(i = (Interpreter *)AllocateFreeSpace(sys, sizeof(Interpreter))))
+        return VMFALSE;
+
+    /* make sure there is space left for the stack */
+    if ((stackSize = (sys->freeTop - sys->freeNext) / sizeof(VMVALUE)) <= 0)
+        return VMFALSE;
+        
+    /* initialize the interpreter state */
+    i->heap = heap;
+    i->stack = (VMVALUE *)((uint8_t *)i + sizeof(Interpreter));
+    i->stackTop = i->stack + stackSize;
+    
+    /* setup to execute the main function */
     i->code = main;
     i->cbase = i->pc = GetCodePtr(main);
     i->sp = i->fp = i->stackTop;
@@ -42,7 +54,7 @@ int Execute(Interpreter *i, VMHANDLE main)
         return VMFALSE;
 
     for (;;) {
-#if 1
+#if 0
         ShowStack(i);
         DecodeInstruction(0, 0, i->pc);
 #endif

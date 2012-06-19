@@ -34,6 +34,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
         return VMFALSE;
         
     /* initialize the interpreter state */
+    i->sys = sys;
     i->heap = heap;
     i->stack = (VMVALUE *)((uint8_t *)i + sizeof(Interpreter));
     i->stackTop = i->stack + stackSize;
@@ -44,7 +45,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
     i->sp = i->fp = i->stackTop;
     i->hsp = i->hfp = (VMHANDLE *)i->stack - 1;
 
-    if (setjmp(i->errorTarget))
+    if (setjmp(i->sys->errorTarget))
         return VMFALSE;
 
     for (;;) {
@@ -185,7 +186,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
             ind = *i->sp;
             obj = *i->hsp;
             if (ind < 0 || ind >= GetHeapObjSize(obj))
-                Abort(i, str_subscript_err, ind);
+                Abort(i->sys, str_subscript_err, ind);
             *i->sp = GetIntegerVectorBase(obj)[ind];
             DropH(i, 1);
             break;
@@ -194,7 +195,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
             ind = Pop(i);
             obj = *i->hsp;
             if (ind < 0 || ind >= GetHeapObjSize(obj))
-                Abort(i, str_subscript_err, ind);
+                Abort(i->sys, str_subscript_err, ind);
             GetIntegerVectorBase(obj)[ind] = tmp2;
             DropH(i, 1);
             break;
@@ -222,7 +223,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
             ind = Pop(i);
             obj = *i->hsp;
             if (ind < 0 || ind >= GetHeapObjSize(obj))
-                Abort(i, str_subscript_err, ind);
+                Abort(i->sys, str_subscript_err, ind);
             *i->hsp = GetStringVectorBase(obj)[ind];
             break;
         case OP_VSETH:
@@ -230,7 +231,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
             ind = Pop(i);
             obj = *i->hsp;
             if (ind < 0 || ind >= GetHeapObjSize(obj))
-                Abort(i, str_subscript_err, ind);
+                Abort(i->sys, str_subscript_err, ind);
             GetStringVectorBase(obj)[ind] = htmp;
             DropH(i, 1);
             break;
@@ -260,7 +261,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
             Drop(i, 1);
             break;
         default:
-            Abort(i, str_opcode_err, VMCODEBYTE(i->pc - 1));
+            Abort(i->sys, str_opcode_err, VMCODEBYTE(i->pc - 1));
             break;
         }
     }
@@ -272,7 +273,7 @@ static void StartCode(Interpreter *i)
     VMVALUE tmp, tmp2;
 
     if (!code)
-        Abort(i, str_not_code_object_err, code);
+        Abort(i->sys, str_not_code_object_err, code);
         
     switch (GetHeapObjType(code)) {
     case ObjTypeCode:
@@ -292,7 +293,7 @@ static void StartCode(Interpreter *i)
         (*GetIntrinsicHandler(code))(i);
         break;
     default:
-        Abort(i, str_not_code_object_err, code);
+        Abort(i->sys, str_not_code_object_err, code);
         break;
     }
 }
@@ -360,24 +361,7 @@ void ShowStack(Interpreter *i)
 
 void StackOverflow(Interpreter *i)
 {
-    Abort(i, str_stack_overflow_err);
-}
-
-void Abort(Interpreter *i, const char *fmt, ...)
-{
-    char buf[100], *p = buf;
-    va_list ap;
-    va_start(ap, fmt);
-    VM_printf(str_abort_prefix);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    while (*p != '\0')
-        VM_putchar(*p++);
-    VM_putchar('\n');
-    va_end(ap);
-    if (i)
-        longjmp(i->errorTarget, 1);
-    else
-        exit(1);
+    Abort(i->sys, str_stack_overflow_err);
 }
 
 FLASH_SPACE char str_subscript_err[]        = "subscript out of bounds: %d";
@@ -385,7 +369,6 @@ FLASH_SPACE char str_stack_overflow_err[]   = "stack overflow";
 FLASH_SPACE char str_not_code_object_err[]  = "not code object: %d";
 FLASH_SPACE char str_opcode_err[]           = "undefined opcode 0x%02x";
 FLASH_SPACE char str_value_fmt[]            = "%d";
-FLASH_SPACE char str_abort_prefix[]         = "abort: ";
 FLASH_SPACE char str_hfp_tag[]              = " <hfp>";
 FLASH_SPACE char str_hstack_entry_fmt[]     = " %08x";
 FLASH_SPACE char str_stack_separator[]      = " ---";

@@ -63,7 +63,7 @@ void fcn_mid(Interpreter *i)
     start = i->sp[2];
     n = i->sp[3];
     if (start < 0 || start >= len)
-        Abort(i, str_subscript_err, start + 1);
+        Abort(i->sys, str_subscript_err, start + 1);
     if (start + n > len)
         n = len - start;
     i->sp[3] = (VMVALUE)StoreByteVector(i->heap, ObjTypeString, str + start, n);

@@ -29,7 +29,7 @@ VMHANDLE Compile(System *sys, ObjHeap *heap, int oneStatement)
     c->heap = heap;
     
     /* setup an error target */
-    if (setjmp(c->errorTarget) != 0)
+    if (setjmp(c->sys->errorTarget) != 0)
         return NULL;
 
     /* use the rest of the free space for the compiler heap */
@@ -192,23 +192,8 @@ void *LocalAlloc(ParseContext *c, size_t size)
     void *p;
     size = (size + ALIGN_MASK) & ~ALIGN_MASK;
     if (c->nextLocal + size > sys->freeTop)
-        Fatal(c, "insufficient memory");
+        Abort(c->sys, "insufficient memory");
     p = c->nextLocal;
     c->nextLocal += size;
     return p;
-}
-
-/* Fatal - report a fatal error and exit */
-void Fatal(ParseContext *c, const char *fmt, ...)
-{
-    char buf[100], *p = buf;
-    va_list ap;
-    va_start(ap, fmt);
-    VM_printf("error: ");
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    while (*p != '\0')
-        VM_putchar(*p++);
-    VM_putchar('\n');
-    va_end(ap);
-    longjmp(c->errorTarget, 1);
 }

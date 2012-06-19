@@ -624,5 +624,5 @@ void ParseError(ParseContext *c, const char *fmt, ...)
     VM_printf("    %*s\n", c->tokenOffset, "^");
 
     /* exit until we fix the compiler so it can recover from parse errors */
-    longjmp(c->errorTarget, 1);
+    longjmp(c->sys->errorTarget, 1);
 }

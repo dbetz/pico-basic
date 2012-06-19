@@ -887,7 +887,7 @@ void CheckLabels(ParseContext *c)
     for (label = c->labels; label != NULL; label = next) {
         next = label->next;
         if (label->fixups)
-            Fatal(c, "undefined label: %s", label->name);
+            Abort(c->sys, "undefined label: %s", label->name);
     }
     c->labels = NULL;
 }
@@ -902,7 +902,7 @@ BlockType  CurrentBlockType(ParseContext *c)
 static void PushBlock(ParseContext *c)
 {
     if (++c->bptr >= c->btop)
-        Fatal(c, "statements too deeply nested");
+        Abort(c->sys, "statements too deeply nested");
 }
 
 /* PopBlock - pop a block off the block stack */

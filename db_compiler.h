@@ -8,7 +8,6 @@
 #define __DB_COMPILER_H__
 
 #include <stdio.h>
-#include <setjmp.h>
 #include "db_types.h"
 #include "db_image.h"
 #include "db_system.h"
@@ -124,7 +123,6 @@ typedef enum {
 typedef struct {
     System *sys;                    /* system context */
     ObjHeap *heap;                  /* heap */
-    jmp_buf errorTarget;            /* error target */
     uint8_t *nextLocal;             /* next local heap space location */
     size_t heapSize;                /* size of heap space in bytes */
     Token savedToken;               /* scan - lookahead token */
@@ -242,7 +240,6 @@ void StartCode(ParseContext *c, char *name, CodeType type, VMHANDLE returnType);
 void StoreCode(ParseContext *c);
 void DumpLocalVariables(ParseContext *c);
 void *LocalAlloc(ParseContext *c, size_t size);
-void Fatal(ParseContext *c, const char *fmt, ...);
 
 /* db_statement.c */
 void ParseStatement(ParseContext *c, Token tkn);

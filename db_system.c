@@ -50,3 +50,18 @@ void VM_printf(const char *fmt, ...)
         VM_putchar(*p++);
     va_end(ap);
 }
+
+void Abort(System *sys, const char *fmt, ...)
+{
+    char buf[100], *p = buf;
+    va_list ap;
+    va_start(ap, fmt);
+    VM_printf("error: ");
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    while (*p != '\0')
+        VM_putchar(*p++);
+    VM_putchar('\n');
+    va_end(ap);
+    longjmp(sys->errorTarget, 1);
+}
+

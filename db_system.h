@@ -7,6 +7,7 @@
 #ifndef __DB_SYSTEM_H__
 #define __DB_SYSTEM_H__
 
+#include <setjmp.h>
 #include "db_types.h"
 
 /* program limits */
@@ -14,6 +15,7 @@
 
 /* system context */
 typedef struct {
+    jmp_buf errorTarget;            /* error target */
     int (*getLine)(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
                                     /* function to get a line of input */
     void *getLineCookie;            /* cookie for the getLine function */
@@ -28,6 +30,7 @@ typedef struct {
 System *InitSystem(uint8_t *freeSpace, size_t freeSize);
 uint8_t *AllocateFreeSpace(System *sys, size_t size);
 int GetLine(System *sys);
+void Abort(System *sys, const char *fmt, ...);
 
 void VM_printf(const char *fmt, ...);
 void VM_putchar(int ch);

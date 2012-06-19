@@ -9,7 +9,6 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <setjmp.h>
 #include "db_types.h"
 #include "db_image.h"
 #include "db_system.h"
@@ -22,8 +21,8 @@ typedef struct Interpreter Interpreter;
 
 /* interpreter state structure */
 struct Interpreter {
+    System *sys;
     ObjHeap *heap;                  /* heap */
-    jmp_buf errorTarget;
     VMVALUE *stack;
     VMVALUE *stackTop;
     VMVALUE *fp;
@@ -82,7 +81,6 @@ extern FLASH_SPACE char str_stack_overflow_err[];
 extern FLASH_SPACE char str_not_code_object_err[];
 extern FLASH_SPACE char str_opcode_err[];
 extern FLASH_SPACE char str_value_fmt[];
-extern FLASH_SPACE char str_abort_prefix[];
 extern FLASH_SPACE char str_hfp_tag[];
 extern FLASH_SPACE char str_hstack_entry_fmt[];
 extern FLASH_SPACE char str_stack_separator[];
@@ -91,8 +89,6 @@ extern FLASH_SPACE char str_stack_entry[];
 
 /* prototypes from db_vmint.c */
 int Execute(System *sys, ObjHeap *heap, VMHANDLE main);
-void Warn(const char *fmt, ...);                    /* fmt in FLASH_SPACE */
-void Abort(Interpreter *i, const char *fmt, ...);   /* fmt in FLASH_SPACE */
 
 /* prototypes from db_vmdebug.c */
 void DecodeFunction(VMUVALUE base, const uint8_t *code, int len);

@@ -41,6 +41,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
     
     /* setup to execute the main function */
     i->code = main;
+    ObjAddRef(i->code);
     i->cbase = i->pc = GetCodePtr(main);
     i->sp = i->fp = i->stackTop;
     i->hsp = i->hfp = (VMHANDLE *)i->stack - 1;
@@ -49,7 +50,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
         return VMFALSE;
 
     for (;;) {
-#if 0
+#if 1
         ShowStack(i);
         DecodeInstruction(0, 0, i->pc);
 #endif
@@ -202,21 +203,26 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
        case OP_LITH:
             get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             CPushH(i, (VMHANDLE)tmp);
+            ObjAddRef(*i->hsp);
             break;
         case OP_GREFH:
             get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
             CPushH(i, GetSymbolPtr((VMHANDLE)tmp)->v.hValue);
+            ObjAddRef(*i->hsp);
             break;
         case OP_GSETH:
             get_VMVALUE(tmp, VMCODEBYTE(i->pc++));
+            ObjRelease(i->heap, GetSymbolPtr((VMHANDLE)tmp)->v.hValue);
             GetSymbolPtr((VMHANDLE)tmp)->v.hValue = PopH(i);
             break;
         case OP_LREFH:
             tmpb = (int8_t)VMCODEBYTE(i->pc++);
             CPushH(i, i->hfp[(int)tmpb]);
+            ObjAddRef(*i->hsp);
             break;
         case OP_LSETH:
             tmpb = (int8_t)VMCODEBYTE(i->pc++);
+            ObjRelease(i->heap, i->hfp[(int)tmpb]);
             i->hfp[(int)tmpb] = PopH(i);
             break;
         case OP_VREFH:
@@ -225,6 +231,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
             if (ind < 0 || ind >= GetHeapObjSize(obj))
                 Abort(i->sys, str_subscript_err, ind);
             *i->hsp = GetStringVectorBase(obj)[ind];
+            ObjAddRef(*i->hsp);
             break;
         case OP_VSETH:
             htmp = PopH(i);
@@ -232,6 +239,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
             obj = *i->hsp;
             if (ind < 0 || ind >= GetHeapObjSize(obj))
                 Abort(i->sys, str_subscript_err, ind);
+            ObjRelease(i->heap, GetStringVectorBase(obj)[ind]);
             GetStringVectorBase(obj)[ind] = htmp;
             DropH(i, 1);
             break;
@@ -260,6 +268,10 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
         case OP_DROP:
             Drop(i, 1);
             break;
+        case OP_DROPH:
+            ObjRelease(i->heap, *i->hsp);
+            DropH(i, 1);
+            break;
         default:
             Abort(i->sys, str_opcode_err, VMCODEBYTE(i->pc - 1));
             break;
@@ -287,6 +299,7 @@ static void StartCode(Interpreter *i)
         i->fp[F_HFP] = tmp2;
         i->fp[F_PC] = (VMVALUE)(i->pc - i->cbase);
         i->code = code;
+        ObjAddRef(i->code);
         i->cbase = i->pc = GetCodePtr(code);
         break;
     case ObjTypeIntrinsic:
@@ -302,6 +315,7 @@ static void PopFrame(Interpreter *i)
 {
     int argumentCount = VMCODEBYTE(i->pc++);
     int handleArgumentCount = VMCODEBYTE(i->pc++);
+    ObjRelease(i->heap, i->code);
     i->code = i->hfp[HF_CODE];
     i->hsp = i->hfp;
     DropH(i, handleArgumentCount);
@@ -329,12 +343,17 @@ static void StringCat(Interpreter *i)
     len2 = GetHeapObjSize(hStr2);
 
     /* allocate the result string */
-    *i->hsp = NewString(i->heap, len1 + len2);
+    if (!(*i->hsp = NewString(i->heap, len1 + len2)))
+        Abort(i->sys, "insufficient memory");
     str = GetStringPtr((VMHANDLE)*i->sp);
 
     /* copy the source strings into the result string */
     memcpy(str, str1, len1);
     memcpy(str + len1, str2, len2);
+    
+    /* release the two argument strings */
+    ObjRelease(i->heap, hStr1);
+    ObjRelease(i->heap, hStr2);
 }
 
 void ShowStack(Interpreter *i)

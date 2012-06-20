@@ -158,7 +158,10 @@ typedef struct {
 #define GetHeapObjHdr(h)        ((ObjHdr *)*(h) - 1)
 #define GetHeapObjType(h)       (GetHeapObjHdr(h)->type)
 #define GetHeapObjSize(h)       (GetHeapObjHdr(h)->size)
-#define ObjAddRef(h)            (++GetHeapObjHdr(h)->refCnt)
+#define ObjAddRef(h)            do {                                            \
+                                    if (h)                                      \
+                                        ++GetHeapObjHdr(h)->refCnt;             \
+                                } while (0)
 
 /* heap structure */
 typedef struct {

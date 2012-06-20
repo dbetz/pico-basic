@@ -60,7 +60,7 @@ struct Interpreter {
                             else  {                                     \
                                 int cnt = (n);                          \
                                 while (--cnt >= 0)                      \
-                                    PushH(i,0);                         \
+                                    PushH(i, NULL);                     \
                             }                                           \
                         } while (0)
 #define CPushH(i, v)    do {                                            \

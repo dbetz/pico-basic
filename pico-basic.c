@@ -5,6 +5,7 @@
 static DATA_SPACE uint8_t space[WORKSPACESIZE];
 
 DefIntrinsic(dump);
+DefIntrinsic(gc);
 
 static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
 
@@ -24,7 +25,8 @@ int main(int argc, char *argv[])
     if (!(heap = InitHeap(sys, HEAPSIZE, MAXOBJECTS)))
         return 1;
         
-    AddIntrinsic(heap, "DUMP",          dump,        "i")
+    AddIntrinsic(heap, "DUMP",          dump,       "i")
+    AddIntrinsic(heap, "GC",            gc,         "i")
 
     freeMark = sys->freeNext;
      
@@ -50,5 +52,10 @@ static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber)
 void fcn_dump(Interpreter *i)
 {
     DumpHeap(i->heap);
+}
+
+void fcn_gc(Interpreter *i)
+{
+    CompactHeap(i->heap);
 }
 

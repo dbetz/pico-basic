@@ -14,75 +14,86 @@ static VMVALUE GetStringVal(uint8_t *str, int len);
 /* fcn_abs - ABS(n): return the absolute value of a number */
 void fcn_abs(Interpreter *i)
 {
-    i->sp[1] = abs(i->sp[1]);
+    *i->sp = abs(*i->sp);
 }
 
 /* fcn_rnd - RND(n): return a random number between 0 and n-1 */
 void fcn_rnd(Interpreter *i)
 {
-    i->sp[1] = rand() % i->sp[1];
+    *i->sp = rand() % *i->sp;
 }
 
 /* fcn_left - LEFT$(str$, n): return the leftmost n characters of a string */
 void fcn_left(Interpreter *i)
 {
+    VMHANDLE hstr;
     uint8_t *str;
     size_t len;
     VMVALUE n;
-    str = GetStringPtr((VMHANDLE)i->sp[1]);
-    len = GetHeapObjSize((VMHANDLE)i->sp[1]);
-    n = i->sp[2];
+    str = GetStringPtr(*i->hsp);
+    len = GetHeapObjSize(*i->hsp);
+    n = *i->sp;
     if (n > len)
         n = len;
-    i->sp[2] = (VMVALUE)StoreByteVector(i->heap, ObjTypeString, str, n);
+    hstr = StoreByteVector(i->heap, ObjTypeString, str, n);
+    ObjRelease(i->heap, *i->hsp);
+    *i->hsp = hstr;
+    Drop(i, 1);
 }
 
 /* fcn_right - RIGHT$(str$, n): return the rightmost n characters of a string */
 void fcn_right(Interpreter *i)
 {
+    VMHANDLE hstr;
     uint8_t *str;
     size_t len;
     VMVALUE n;
-    str = GetStringPtr((VMHANDLE)i->sp[1]);
-    len = GetHeapObjSize((VMHANDLE)i->sp[1]);
-    n = i->sp[2];
+    str = GetStringPtr(*i->hsp);
+    len = GetHeapObjSize(*i->hsp);
+    n = *i->sp;
     if (n > len)
         n = len;
-    i->sp[2] = (VMVALUE)StoreByteVector(i->heap, ObjTypeString, str + len - n, n);
-    Drop(i, 2);
+    hstr = StoreByteVector(i->heap, ObjTypeString, str + len - n, n);
+    ObjRelease(i->heap, *i->hsp);
+    *i->hsp = hstr;
+    Drop(i, 1);
 }
 
 /* fcn_mid - MID$(str$, start, n): return n characters from the middle of a string */
 void fcn_mid(Interpreter *i)
 {
+    VMHANDLE hstr;
     VMVALUE start, n;
     uint8_t *str;
     size_t len;
-    str = GetStringPtr((VMHANDLE)i->sp[1]);
-    len = GetHeapObjSize((VMHANDLE)i->sp[1]);
-    start = i->sp[2];
-    n = i->sp[3];
+    str = GetStringPtr(*i->hsp);
+    len = GetHeapObjSize(*i->hsp);
+    start = *i->sp;
+    n = i->sp[1];
     if (start < 0 || start >= len)
         Abort(i->sys, str_subscript_err, start + 1);
     if (start + n > len)
         n = len - start;
-    i->sp[3] = (VMVALUE)StoreByteVector(i->heap, ObjTypeString, str + start, n);
+    hstr = StoreByteVector(i->heap, ObjTypeString, str + start, n);
+    ObjRelease(i->heap, *i->hsp);
+    *i->hsp = hstr;
+    Drop(i, 2);
 }
 
 /* fcn_chr - CHR$(n): return a one character string with the specified character code */
 void fcn_chr(Interpreter *i)
 {
     uint8_t buf[1];
-    buf[0] = (char)i->sp[1];
-    i->sp[1] = (VMVALUE)StoreByteVector(i->heap, ObjTypeString, buf, 1);
+    buf[0] = (char)Pop(i);
+    CPushH(i, StoreByteVector(i->heap, ObjTypeString, buf, 1));
 }
 
 /* fcn_str - STR$(n): return n converted to a string */
 void fcn_str(Interpreter *i)
 {
     char buf[32];
-    snprintf(buf, sizeof(buf), str_value_fmt, i->sp[1]);
-    i->sp[1] = (VMVALUE)StoreByteVector(i->heap, ObjTypeString, (uint8_t *)buf, strlen(buf));
+    snprintf(buf, sizeof(buf), str_value_fmt, Pop(i));
+    CPushH(i, StoreByteVector(i->heap, ObjTypeString, (uint8_t *)buf, strlen(buf)));
 }
 
 /* fcn_val - VAL(str$): return the numeric value of a string */
@@ -90,9 +101,10 @@ void fcn_val(Interpreter *i)
 {
     uint8_t *str;
     size_t len;
-    str = GetStringPtr((VMHANDLE)i->sp[1]);
-    len = GetHeapObjSize((VMHANDLE)i->sp[1]);
-    i->sp[1] = GetStringVal(str, len);
+    str = GetStringPtr(*i->hsp);
+    len = GetHeapObjSize(*i->hsp);
+    CPush(i, GetStringVal(str, len));
+    ObjRelease(i->heap, PopH(i));
 }
 
 /* fcn_asc - ASC(str$): return the character code of the first character of a string */
@@ -100,15 +112,17 @@ void fcn_asc(Interpreter *i)
 {
     uint8_t *str;
     size_t len;
-    str = GetStringPtr((VMHANDLE)i->sp[1]);
-    len = GetHeapObjSize((VMHANDLE)i->sp[1]);
-    i->sp[1] = len > 0 ? *str : 0;
+    str = GetStringPtr(*i->hsp);
+    len = GetHeapObjSize(*i->hsp);
+    CPush(i, len > 0 ? *str : 0);
+    ObjRelease(i->heap, PopH(i));
 }
 
 /* fcn_len - LEN(str$): return length of a string */
 void fcn_len(Interpreter *i)
 {
-    i->sp[1] = GetHeapObjSize((VMHANDLE)i->sp[1]);
+    CPush(i,GetHeapObjSize(*i->hsp));
+    ObjRelease(i->heap, PopH(i));
 }
 
 /* GetStringVal - get the numeric value of a string */
@@ -155,7 +169,6 @@ static VMVALUE GetStringVal(uint8_t *str, int len)
             val = ch - '0';
             break;
         }
-
 
         /* get the number */
         switch (radix) {
@@ -217,6 +230,7 @@ void fcn_printStr(Interpreter *i)
         VM_putchar(*str++);
         --size;
     }
+    ObjRelease(i->heap, *i->hsp);
     DropH(i, 1);
 }
 

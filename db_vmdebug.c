@@ -70,6 +70,7 @@ static FLASH_SPACE OTDEF otab[] = {
 { OP_RETURNV,   "RETURNV",  FMT_2BYTES  },
 { OP_DROP,      "DROP",     FMT_NONE    },
 { OP_DROPH,     "DROPH",    FMT_NONE    },
+{ OP_CAT,       "CAT",      FMT_NONE    },
 { 0,            NULL,       0           }
 };
 

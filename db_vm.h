@@ -45,8 +45,10 @@ struct Interpreter {
                             }                                           \
                         } while (0)
 #define CPush(i, v)     do {                                            \
-                            if (--(i)->sp <= (VMVALUE *)(i)->hsp)       \
+                            if (--(i)->sp <= (VMVALUE *)(i)->hsp) {     \
+                                ++(i)->sp;                              \
                                 StackOverflow(i);                       \
+                            }                                           \
                             else                                        \
                                 *(i)->sp = (v);                         \
                         } while (0)
@@ -64,8 +66,10 @@ struct Interpreter {
                             }                                           \
                         } while (0)
 #define CPushH(i, v)    do {                                            \
-                            if (++(i)->hsp >= (VMHANDLE *)(i)->sp)      \
+                            if (++(i)->hsp >= (VMHANDLE *)(i)->sp) {    \
+                                --(i)->hsp;                             \
                                 StackOverflow(i);                       \
+                            }                                           \
                             else                                        \
                                 *(i)->hsp = (v);                        \
                         } while (0)

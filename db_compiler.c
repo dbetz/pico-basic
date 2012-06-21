@@ -19,7 +19,6 @@ VMHANDLE Compile(System *sys, ObjHeap *heap, int oneStatement)
 {
     int prompt = VMFALSE;
     ParseContext *c;
-    
 
     /* allocate and initialize the parse context */
     if (!(c = (ParseContext *)AllocateFreeSpace(sys, sizeof(ParseContext))))
@@ -27,6 +26,9 @@ VMHANDLE Compile(System *sys, ObjHeap *heap, int oneStatement)
     memset(c, 0, sizeof(ParseContext));
     c->sys = sys;
     c->heap = heap;
+    
+    /* setup the heap before/after compact functions */
+    heap->beforeCompact = heap->afterCompact = NULL;
     
     /* setup an error target */
     if (setjmp(c->sys->errorTarget) != 0)

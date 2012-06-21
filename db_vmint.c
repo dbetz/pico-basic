@@ -15,6 +15,7 @@
 static void StartCode(Interpreter *i);
 static void PopFrame(Interpreter *i);
 static void StringCat(Interpreter *i);
+static void AfterCompact(void *cookie);
 
 /* Execute - execute the main code */
 int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
@@ -33,6 +34,11 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
     if ((stackSize = (sys->freeTop - sys->freeNext) / sizeof(VMVALUE)) <= 0)
         return VMFALSE;
         
+    /* setup the heap before/after compact functions */
+    heap->beforeCompact = NULL;
+    heap->afterCompact = AfterCompact;
+    heap->compactCookie = i;
+    
     /* initialize the interpreter state */
     i->sys = sys;
     i->heap = heap;
@@ -46,11 +52,14 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
     i->sp = i->fp = i->stackTop;
     i->hsp = i->hfp = (VMHANDLE *)i->stack - 1;
 
-    if (setjmp(i->sys->errorTarget))
+    if (setjmp(i->sys->errorTarget)) {
+        while (i->hsp > (VMHANDLE *)i->stack)
+            ObjRelease(i->heap, PopH(i));
         return VMFALSE;
+    }
 
     for (;;) {
-#if 1
+#if 0
         ShowStack(i);
         DecodeInstruction(0, 0, i->pc);
 #endif
@@ -318,7 +327,10 @@ static void PopFrame(Interpreter *i)
     ObjRelease(i->heap, i->code);
     i->code = i->hfp[HF_CODE];
     i->hsp = i->hfp;
-    DropH(i, handleArgumentCount);
+    while (--handleArgumentCount >= 0) {
+        ObjRelease(i->heap, *i->hsp);
+        DropH(i, 1);
+    }
     i->cbase = GetCodePtr(i->code);
     i->pc = i->cbase + i->fp[F_PC];
     i->hfp = (VMHANDLE *)i->stack + i->fp[F_HFP];
@@ -345,7 +357,7 @@ static void StringCat(Interpreter *i)
     /* allocate the result string */
     if (!(*i->hsp = NewString(i->heap, len1 + len2)))
         Abort(i->sys, "insufficient memory");
-    str = GetStringPtr((VMHANDLE)*i->sp);
+    str = GetStringPtr(*i->hsp);
 
     /* copy the source strings into the result string */
     memcpy(str, str1, len1);
@@ -381,6 +393,15 @@ void ShowStack(Interpreter *i)
 void StackOverflow(Interpreter *i)
 {
     Abort(i->sys, str_stack_overflow_err);
+}
+
+/* AfterCompact - called after the heap manager compacts the heap */
+static void AfterCompact(void *cookie)
+{
+    Interpreter *i = (Interpreter *)cookie;
+    uint8_t *cbase = GetCodePtr(i->code);
+    i->pc = cbase + (i->pc - i->cbase);
+    i->cbase = cbase;
 }
 
 FLASH_SPACE char str_subscript_err[]        = "subscript out of bounds: %d";

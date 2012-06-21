@@ -673,10 +673,6 @@ static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size)
         case OP_GT:
             break;
         case OP_LIT:
-        case OP_GREF:
-        case OP_GSET:
-        case OP_GREFH:
-        case OP_GSETH:
             p += sizeof(VMVALUE);
             break;
         case OP_LREF:
@@ -697,6 +693,10 @@ static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size)
         case OP_DROP:
             break;
         case OP_LITH:
+        case OP_GREF:
+        case OP_GSET:
+        case OP_GREFH:
+        case OP_GSETH:
         {
             VMVALUE tmp;
             get_VMVALUE(tmp, *p++);
@@ -718,6 +718,10 @@ static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size)
 void CompactHeap(ObjHeap *heap)
 {
     uint8_t *data, *next, *free;
+    
+    /* call the client's before function */
+    if (heap->beforeCompact)
+        (*heap->beforeCompact)(heap->compactCookie);
 
     /* initialize the heap scan */
     data = next = heap->data;
@@ -730,6 +734,7 @@ void CompactHeap(ObjHeap *heap)
         size_t totalSize = sizeof(ObjHdr) + WORDSIZE(byteSize);
         if (hdr->handle) {
             if (data != next) {
+                VM_printf("Moving %p to %p\n", data, next);
                 *hdr->handle = (void *)(next + sizeof(ObjHdr));
                 memmove(next, data, totalSize);
             }
@@ -740,6 +745,10 @@ void CompactHeap(ObjHeap *heap)
 
     /* store the new free pointer */
     heap->free = next;
+
+    /* call the client's before function */
+    if (heap->afterCompact)
+        (*heap->afterCompact)(heap->compactCookie);
 }
 
 /* DumpHeap - dump the heap */

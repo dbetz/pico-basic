@@ -178,6 +178,9 @@ typedef struct {
     ConstantType byteArrayType;     /* byte array type */
     ConstantType stringType;        /* string type */
     ConstantType stringArrayType;   /* string array type */
+    void (*beforeCompact)(void *cookie);
+    void (*afterCompact)(void *cookie);
+    void *compactCookie;
 } ObjHeap;
 
 /* prototypes */

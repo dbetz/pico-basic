@@ -609,8 +609,19 @@ static void ObjRelease1(ObjHeap *heap, VMHANDLE stack)
         }
         case ObjTypeType:
         {
-            //Type *type = GetTypePtr(object);
-            // BUG: need to trace fields
+            Type *type = GetTypePtr(object);
+            switch (type->id) {
+            case TYPE_ARRAY:
+                stack = DereferenceAndMaybePushObject(stack, type->u.arrayInfo.elementType);
+                break;
+            case TYPE_FUNCTION:
+                stack = DereferenceAndMaybePushObject(stack, type->u.functionInfo.returnType);
+                stack = DereferenceAndMaybePushObject(stack, type->u.functionInfo.arguments.head);
+                break;
+            default:
+                /* no internal references */
+                break;
+            }
             break;
         }
         case ObjTypeCode:

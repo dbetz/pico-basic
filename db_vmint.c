@@ -55,6 +55,7 @@ int Execute(System *sys, ObjHeap *heap, VMHANDLE main)
     if (setjmp(i->sys->errorTarget)) {
         while (i->hsp > (VMHANDLE *)i->stack)
             ObjRelease(i->heap, PopH(i));
+        ObjRelease(i->heap, i->code);
         return VMFALSE;
     }
 

@@ -597,7 +597,8 @@ static void ObjRelease1(ObjHeap *heap, VMHANDLE stack)
             Symbol *symbol = GetSymbolPtr(object);
             stack = DereferenceAndMaybePushObject(stack, symbol->next);
             stack = DereferenceAndMaybePushObject(stack, symbol->type);
-            // BUG: need to deal with the symbol value
+            if (IsHandleType(symbol->type))
+                stack = DereferenceAndMaybePushObject(stack, symbol->v.hValue);
             break;
         }
         case ObjTypeLocal:

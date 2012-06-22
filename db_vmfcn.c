@@ -33,7 +33,9 @@ void fcn_left(Interpreter *i)
     str = GetStringPtr(*i->hsp);
     len = GetHeapObjSize(*i->hsp);
     n = *i->sp;
-    if (n > len)
+    if (n < 0)
+        n = 0;
+    else if (n > len)
         n = len;
     hstr = StoreByteVector(i->heap, ObjTypeString, str, n);
     ObjRelease(i->heap, *i->hsp);
@@ -51,7 +53,9 @@ void fcn_right(Interpreter *i)
     str = GetStringPtr(*i->hsp);
     len = GetHeapObjSize(*i->hsp);
     n = *i->sp;
-    if (n > len)
+    if (n < 0)
+        n = 0;
+    else if (n > len)
         n = len;
     hstr = StoreByteVector(i->heap, ObjTypeString, str + len - n, n);
     ObjRelease(i->heap, *i->hsp);

@@ -8,6 +8,8 @@
 #define strcasecmp  _stricmp
 #endif
 
+#define MAXTOKEN    32
+
 /* command handlers */
 static void DoNew(System *sys);
 #ifdef LOAD_SAVE
@@ -38,7 +40,6 @@ static DATA_SPACE char programName[MAX_PROG_NAME] = "";
 #endif
 
 /* prototypes */
-static int EditGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
 static char *NextToken(System *sys);
 static int ParseNumber(char *token, VMVALUE *pValue);
 static int IsBlank(char *p);
@@ -129,7 +130,6 @@ static void DoLoad(System *sys)
         VM_printf("Loading '%s'\n", programName);
         BufInit();
         while (VM_fgets(sys->lineBuf, sizeof(sys->lineBuf), fp) != NULL) {
-            int len = strlen(sys->lineBuf);
             VMVALUE lineNumber;
             char *token;
             sys->linePtr = sys->lineBuf;
@@ -173,6 +173,7 @@ static void DoSave(System *sys)
 
 static void DoCat(System *sys)
 {
+#if 0
     VMDIRENT entry;
     VMDIR dir;    
     if (VM_opendir(".", &dir) == 0) {
@@ -183,6 +184,7 @@ static void DoCat(System *sys)
         }
         VM_closedir(&dir);
     }
+#endif
 }
 
 #endif
@@ -195,23 +197,22 @@ static void DoList(System *sys)
         VM_printf("%d %s", lineNumber, sys->lineBuf);
 }
 
-static int EditGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber)
-{
-    return BufGetLine(pLineNumber, buf);
-}
-
 static char *NextToken(System *sys)
 {
-    char *token;
-    int ch;
+    static char token[MAXTOKEN];
+    int ch, i;
+    
+    /* skip leading spaces */
     while ((ch = *sys->linePtr) != '\0' && isspace(ch))
         ++sys->linePtr;
-    token = sys->linePtr;
-    while ((ch = *sys->linePtr) != '\0' && !isspace(ch))
-        ++sys->linePtr;
-    if (*sys->linePtr != '\0')
-        *sys->linePtr++ = '\0';
-    return *token == '\0' ? NULL : token;
+        
+    /* collect a token until the next non-space */
+    for (i = 0; (ch = *sys->linePtr) != '\0' && !isspace(ch); ++sys->linePtr)
+        if (i < sizeof(token) - 1)
+            token[i++] = ch;
+    token[i] = '\0';
+    
+    return token[0] == '\0' ? NULL : token;
 }
 
 static int ParseNumber(char *token, VMVALUE *pValue)

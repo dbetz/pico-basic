@@ -32,7 +32,7 @@ osint_posix.o
 
 OBJS = pico-basic.o $(EDITOR_OBJS) $(COMPILER_OBJS) $(RUNTIME_OBJS)
 
-CFLAGS = -Wall -Os -DMAC -m32
+CFLAGS = -Wall -Os -DMAC -m32 -DLOAD_SAVE
 LDFLAGS = $(CFLAGS)
 
 $(NAME): $(OBJS)

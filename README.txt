@@ -15,10 +15,15 @@ REM comment
 
 DEF const = expr
 
-DEF function-name
-DEF function-name ( arg [ , arg ]... )
+FUNCTION function-name
+FUNCTION function-name ( arg [ , arg ]... )
 
-END DEF
+END FUNCTION
+
+SUB function-name
+SUB function-name ( arg [ , arg ]... )
+
+END SUB
 
 RETURN expr
 

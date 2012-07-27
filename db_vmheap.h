@@ -186,6 +186,7 @@ typedef struct {
 
 /* prototypes */
 ObjHeap *InitHeap(System *sys, size_t heapSize, int nHandles);
+void ResetHeap(ObjHeap *heap);
 void InitSymbolTable(SymbolTable *table);
 VMHANDLE AddGlobal(ObjHeap *heap, const char *name, StorageClass storageClass, VMHANDLE type);
 VMHANDLE FindGlobal(ObjHeap *heap, const char *name);

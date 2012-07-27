@@ -64,10 +64,8 @@ static VMHANDLE TraceCode(VMHANDLE stack, uint8_t *code, size_t size);
 ObjHeap *InitHeap(System *sys, size_t size, int nHandles)
 {
     size_t overheadSize, dataSize;
-    VMHANDLE handle;
     ObjHeap *heap;
     uint8_t *data;
-    int cnt;
     
     /* get the size of the header plus the handle table */
     overheadSize = sizeof(ObjHeap) + nHandles * sizeof(void *);
@@ -90,6 +88,20 @@ ObjHeap *InitHeap(System *sys, size_t size, int nHandles)
     heap->handles = (VMHANDLE)(data + dataSize);
     heap->endHandles = heap->handles + nHandles;
     heap->nHandles = nHandles;
+    heap->data = data;
+    
+    /* initialize the heap */
+    ResetHeap(heap);
+    
+    /* return the new heap */
+    return heap;
+}
+
+/* ResetHeap - reset the heap to its intial state */
+void ResetHeap(ObjHeap *heap)
+{
+    VMHANDLE handle;
+    int cnt;
     
     /* create the handle free list */
     heap->freeHandles = NULL;
@@ -98,8 +110,8 @@ ObjHeap *InitHeap(System *sys, size_t size, int nHandles)
         heap->freeHandles = handle;
     }
 
-    /* setup the heap */
-    heap->data = heap->free = data;
+    /* setup the heap free space */
+    heap->free = heap->data;
     
     /* initialize the global symbol table */
     InitSymbolTable(&heap->globals);
@@ -131,9 +143,6 @@ ObjHeap *InitHeap(System *sys, size_t size, int nHandles)
     AddIntrinsic(heap, "printTab",     printTab,   "=")
     AddIntrinsic(heap, "printNL",      printNL,    "=")
     AddIntrinsic(heap, "printFlush",   printFlush, "=")
-
-    /* return the newly initialized heap */
-    return heap;
 }
 
 /* InitSymbolTable - initialize a symbol table */

@@ -73,6 +73,8 @@ static void DoRun(void *cookie)
     BufSeekN(0);
 
     sys->freeNext = sys->freeMark;
+    
+    ResetHeap(heap);
 
     if ((code = Compile(sys, heap, VMFALSE)) != NULL) {
         sys->freeNext = sys->freeMark;

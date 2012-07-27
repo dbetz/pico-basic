@@ -65,7 +65,7 @@ VMHANDLE Compile(System *sys, ObjHeap *heap, int oneStatement)
             if (prompt)
                 VM_printf("  > ");
             if (!GetLine(c->sys))
-                return NULL;
+                break;
         }
             
         /* prompt on continuation lines */

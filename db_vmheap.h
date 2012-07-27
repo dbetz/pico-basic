@@ -7,7 +7,7 @@
 #ifndef __DB_VMHEAP_H__
 #define __DB_VMHEAP_H__
  
-#include "db_types.h"
+#include "db_system.h"
 
 /* object types */
 typedef enum {
@@ -165,6 +165,7 @@ typedef struct {
 
 /* heap structure */
 typedef struct {
+    System *sys;                    /* system context */
     int nHandles;                   /* number of handles */
     VMHANDLE handles;               /* array of handles */
     VMHANDLE endHandles;            /* end of the array of handles */
@@ -192,7 +193,7 @@ void DumpGlobals(ObjHeap *heap);
 VMHANDLE AddLocal(ObjHeap *heap, SymbolTable *table, const char *name, VMHANDLE type, VMVALUE offset);
 VMHANDLE FindLocal(SymbolTable *table, const char *name);
 void DumpLocals(SymbolTable *table, const char *tag);
-int AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler);
+void AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler);
 VMHANDLE NewSymbol(ObjHeap *heap, const char *name, StorageClass storageClass, VMHANDLE type);
 VMHANDLE NewLocal(ObjHeap *heap, const char *name, VMHANDLE type, VMVALUE offset);
 VMHANDLE NewType(ObjHeap *heap, TypeID id);

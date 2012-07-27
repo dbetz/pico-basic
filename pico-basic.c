@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "db_edit.h"
 #include "db_compiler.h"
 #include "db_vm.h"
 
@@ -7,39 +8,65 @@ static DATA_SPACE uint8_t space[WORKSPACESIZE];
 DefIntrinsic(dump);
 DefIntrinsic(gc);
 
+/* command handlers */
+static void DoRun(void *cookie);
+
+/* command table */
+UserCmd userCmds[] = {
+{   "RUN",      DoRun   },
+{   NULL,       NULL    }
+};
+
+void CompileAndExecute(ObjHeap *heap);
+
 static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
 
 int main(int argc, char *argv[])
 {
     VMVALUE lineNumber = 0;
-    uint8_t *freeMark;
     ObjHeap *heap;
     System *sys;
     
     VM_sysinit(argc, argv);
 
-    sys = InitSystem(space, sizeof(space));
+    VM_printf("pico-basic 0.001\n");
+
+    if (!(sys = InitSystem(space, sizeof(space))))
+        return 1;
     sys->getLine = TermGetLine;
     sys->getLineCookie = &lineNumber;
     
-    if (!(heap = InitHeap(sys, HEAPSIZE, MAXOBJECTS)))
+    /* setup an initialization error target */
+    if (setjmp(sys->errorTarget) != 0)
         return 1;
-        
-    AddIntrinsic(heap, "DUMP",          dump,       "i")
-    AddIntrinsic(heap, "GC",            gc,         "i")
 
-    freeMark = sys->freeNext;
+    heap = InitHeap(sys, HEAPSIZE, MAXOBJECTS);                     
+        
+    AddIntrinsic(heap, "DUMP",          dump,       "=i")
+    AddIntrinsic(heap, "GC",            gc,         "=i")
+
+    sys->freeMark = sys->freeNext;
      
-    for (;;) {
-        VMHANDLE code;
-        sys->freeNext = freeMark;
-        if ((code = Compile(sys, heap, VMTRUE)) != NULL) {
-            sys->freeNext = freeMark;
-            Execute(sys, heap, code);
-        }
-    }
+    EditWorkspace(sys, userCmds, (Handler *)CompileAndExecute, heap);
     
     return 0;
+}
+
+static void DoRun(void *cookie)
+{
+    ObjHeap *heap = (ObjHeap *)cookie;
+    CompileAndExecute(heap);
+}
+
+void CompileAndExecute(ObjHeap *heap)
+{
+    System *sys = heap->sys;
+    VMHANDLE code;
+    sys->freeNext = sys->freeMark;
+    if ((code = Compile(sys, heap, VMTRUE)) != NULL) {
+        sys->freeNext = sys->freeMark;
+        Execute(sys, heap, code);
+    }
 }
 
 static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber)

@@ -74,14 +74,15 @@ ObjHeap *InitHeap(System *sys, size_t size, int nHandles)
      
     /* make sure there is enough space left for object data */
     if (size <= overheadSize)
-        return NULL;
+        longjmp(sys->errorTarget, 1);
     dataSize = size - overheadSize;
 
     /* allocate and initialize the parse context */
     if (!(data = (uint8_t *)AllocateFreeSpace(sys, size)))
-        return NULL;
+        longjmp(sys->errorTarget, 1);
     heap = (ObjHeap *)data;
-
+    heap->sys = sys;
+    
     /* setup the heap header */
     data += sizeof(ObjHeap);
 
@@ -125,11 +126,11 @@ ObjHeap *InitHeap(System *sys, size_t size, int nHandles)
     AddIntrinsic(heap, "VAL",          val,        "i=s")
     AddIntrinsic(heap, "ASC",          asc,        "i=s")
     AddIntrinsic(heap, "LEN",          len,        "i=s")
-    AddIntrinsic(heap, "printStr",     printStr,   "is")
-    AddIntrinsic(heap, "printInt",     printInt,   "ii")
-    AddIntrinsic(heap, "printTab",     printTab,   "i")
-    AddIntrinsic(heap, "printNL",      printNL,    "i")
-    AddIntrinsic(heap, "printFlush",   printFlush, "i")
+    AddIntrinsic(heap, "printStr",     printStr,   "=s")
+    AddIntrinsic(heap, "printInt",     printInt,   "=i")
+    AddIntrinsic(heap, "printTab",     printTab,   "=")
+    AddIntrinsic(heap, "printNL",      printNL,    "=")
+    AddIntrinsic(heap, "printFlush",   printFlush, "=")
 
     /* return the newly initialized heap */
     return heap;
@@ -244,7 +245,7 @@ void DumpLocals(SymbolTable *table, const char *tag)
 }
 
 /* AddIntrinsic1 - add an intrinsic function to the global symbol table */
-int AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler)
+void AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler)
 {
     int argumentCount, handleArgumentCount;
     VMHANDLE symbol, type, argType;
@@ -252,7 +253,8 @@ int AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler)
     Type *typ;
     
     /* make the function type */
-    type = NewType(heap, TYPE_FUNCTION);
+    if (!(type = NewType(heap, TYPE_FUNCTION)))
+        longjmp(heap->sys->errorTarget, 1);
     typ = GetTypePtr(type);
     InitSymbolTable(&arguments);
     
@@ -264,10 +266,14 @@ int AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler)
     case 's':
         typ->u.functionInfo.returnType = CommonType(heap, stringType);
         break;
+    case '=':
+        typ->u.functionInfo.returnType = NULL;
+        goto argumentTypes;
     default:
-        return VMFALSE;
+        longjmp(heap->sys->errorTarget, 1);
     }
     
+argumentTypes:
     /* initialize the argument counts */
     argumentCount = handleArgumentCount = 0;
     
@@ -284,22 +290,20 @@ int AddIntrinsic1(ObjHeap *heap, char *name, char *types, VMHANDLE handler)
                 ++handleArgumentCount;
                 break;
             default:
-                return VMFALSE;
+                longjmp(heap->sys->errorTarget, 1);
             }
             AddLocal(heap, &arguments, "", argType, 0);
         }
     }
 
     /* add a global symbol for the intrinsic function */
-    symbol = AddGlobal(heap, name, SC_CONSTANT, type);
+    if (!(symbol = AddGlobal(heap, name, SC_CONSTANT, type)))
+        longjmp(heap->sys->errorTarget, 1);
     GetSymbolPtr(symbol)->v.hValue = handler;
 
     /* store the argument symbol table */
     typ = GetTypePtr(type);
     typ->u.functionInfo.arguments = arguments;
-    
-    /* return successfully */
-    return VMTRUE;
 }
 
 /* NewSymbol - create a new symbol object */

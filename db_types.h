@@ -135,8 +135,9 @@ struct VMDIRENT {
 #define DATA_SPACE              __attribute__((far))
 #define VMCODEBYTE(p)           *(p)
 
-#define snprintf    __simple_snprintf
-#define vsnprintf   __simple_vsnprintf
+#define NEED_SIMPLE_PRINTF
+
+int strcasecmp(const char *s1, const char *s2);
 
 #endif  // PIC_COMMON
 
@@ -201,6 +202,20 @@ struct VMDIRENT {
 };
 
 #endif // ANSI_FILE_IO
+
+/*****************/
+/* SIMPLE PRINTF */
+/*****************/
+
+#ifdef NEED_SIMPLE_PRINTF
+
+#define snprintf    __simple_snprintf
+#define vsnprintf   __simple_vsnprintf
+
+int __simple_vsnprintf(char *str, size_t size, const char *fmt, va_list args);
+int __simple_snprintf(char *str, size_t size, const char *fmt, ...);
+
+#endif
 
 /************/
 /* DEFAULTS */

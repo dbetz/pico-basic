@@ -60,13 +60,13 @@ VMHANDLE Compile(System *sys, ObjHeap *heap, int oneStatement)
     do {
         Token tkn;
         
-        /* display a prompt on continuation lines for immediate mode */
-        if (oneStatement && prompt)
-            VM_printf("  > ");
-            
         /* get the next line */
-        if (!GetLine(c->sys))
-            return NULL;
+        if (!oneStatement || prompt) {
+            if (prompt)
+                VM_printf("  > ");
+            if (!GetLine(c->sys))
+                return NULL;
+        }
             
         /* prompt on continuation lines */
         prompt = VMTRUE;

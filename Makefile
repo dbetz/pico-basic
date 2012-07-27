@@ -11,6 +11,10 @@ db_vm.h \
 db_vmdebug.h \
 db_vmheap.h
 
+EDITOR_OBJS = \
+db_edit.c \
+editbuf.c
+
 COMPILER_OBJS = \
 db_compiler.o \
 db_statement.o \
@@ -26,7 +30,7 @@ db_vmdebug.o \
 db_system.o \
 osint_posix.o
 
-OBJS = pico-basic.o $(COMPILER_OBJS) $(RUNTIME_OBJS)
+OBJS = pico-basic.o $(EDITOR_OBJS) $(COMPILER_OBJS) $(RUNTIME_OBJS)
 
 CFLAGS = -Wall -Os -DMAC -m32
 LDFLAGS = $(CFLAGS)

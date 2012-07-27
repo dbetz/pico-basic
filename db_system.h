@@ -13,19 +13,21 @@
 /* program limits */
 #define MAXLINE         128
 
+/* line input handler */
+typedef int GetLineHandler(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
+
 /* system context */
 typedef struct {
-    jmp_buf errorTarget;            /* error target */
-    int (*getLine)(void *cookie, char *buf, int len, VMVALUE *pLineNumber);
-                                    /* function to get a line of input */
-    void *getLineCookie;            /* cookie for the getLine function */
-    int lineNumber;                 /* current line number */
-    uint8_t *freeSpace;             /* base of free space */
-    uint8_t *freeMark;              /* top of permanently allocated storage */
-    uint8_t *freeNext;              /* next free space available */
-    uint8_t *freeTop;               /* top of free space */
-    char lineBuf[MAXLINE];          /* current input line */
-    char *linePtr;                  /* pointer to the current character */
+    jmp_buf errorTarget;        /* error target */
+    GetLineHandler *getLine;    /* function to get a line of input */
+    void *getLineCookie;        /* cookie for the getLine function */
+    int lineNumber;             /* current line number */
+    uint8_t *freeSpace;         /* base of free space */
+    uint8_t *freeMark;          /* top of permanently allocated storage */
+    uint8_t *freeNext;          /* next free space available */
+    uint8_t *freeTop;           /* top of free space */
+    char lineBuf[MAXLINE];      /* current input line */
+    char *linePtr;              /* pointer to the current character */
 } System;
 
 System *InitSystem(uint8_t *freeSpace, size_t freeSize);

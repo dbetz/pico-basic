@@ -52,17 +52,44 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+static int EditGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber)
+{
+    return BufGetLine(pLineNumber, buf);
+}
+
 static void DoRun(void *cookie)
 {
     ObjHeap *heap = (ObjHeap *)cookie;
-    CompileAndExecute(heap);
+    System *sys = heap->sys;
+    GetLineHandler *getLine;
+    void *getLineCookie;
+    VMHANDLE code;
+
+    getLine = sys->getLine;
+    getLineCookie = sys->getLineCookie;
+    
+    sys->getLine = EditGetLine;
+
+    BufSeekN(0);
+
+    sys->freeNext = sys->freeMark;
+
+    if ((code = Compile(sys, heap, VMFALSE)) != NULL) {
+        sys->freeNext = sys->freeMark;
+        Execute(sys, heap, code);
+    }
+
+    sys->getLine = getLine;
+    sys->getLineCookie = getLineCookie;
 }
 
 void CompileAndExecute(ObjHeap *heap)
 {
     System *sys = heap->sys;
     VMHANDLE code;
+    
     sys->freeNext = sys->freeMark;
+    
     if ((code = Compile(sys, heap, VMTRUE)) != NULL) {
         sys->freeNext = sys->freeMark;
         Execute(sys, heap, code);

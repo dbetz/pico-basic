@@ -69,7 +69,7 @@ VMHANDLE Compile(System *sys, ObjHeap *heap, int oneStatement)
         }
             
         /* prompt on continuation lines */
-        prompt = VMTRUE;
+        prompt = (oneStatement ? VMTRUE : VMFALSE);
             
         /* parse the statement */
         if ((tkn = GetToken(c)) != T_EOL)

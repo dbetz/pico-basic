@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <ctype.h>
+#include <sys/sd.h>
 #include <dirent.h>
 #include "db_vm.h"
 
@@ -33,13 +34,13 @@ void VM_sysinit(int argc, char *argv[])
 #ifdef __PROPELLER_LMM__
     LoadSDDriver(0);
 #endif
-    dfs_mount();
+    dfs_mount_defaults();
 #endif
 }
 
-void VM_getline(char *buf, int size)
+char *VM_getline(char *buf, int size)
 {
-    fgets(buf, size, stdin);
+    return fgets(buf, size, stdin);
 }
 
 void VM_flush(void)

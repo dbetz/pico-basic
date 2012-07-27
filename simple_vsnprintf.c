@@ -20,8 +20,10 @@
  * does c,s,u,d,x
  */
  
-typedef long LONG;
-typedef unsigned long ULONG;
+//typedef long LONG;
+//typedef unsigned long ULONG;
+typedef int LONG;
+typedef unsigned int ULONG;
 
 /* string buffer */
 typedef struct {

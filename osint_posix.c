@@ -10,7 +10,7 @@ void VM_sysinit(int argc, char *argv[])
 #endif
 }
 
-void VM_getline(char *buf, int size)
+char *VM_getline(char *buf, int size)
 {
 #ifdef LINE_EDIT
     int i = 0;
@@ -43,8 +43,9 @@ void VM_getline(char *buf, int size)
         }
     }
     buf[i] = '\0';
+    return buf;
 #else
-    fgets(buf, size, stdin);
+    return fgets(buf, size, stdin);
 #endif
 }
 

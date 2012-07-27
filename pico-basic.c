@@ -102,7 +102,7 @@ static int TermGetLine(void *cookie, char *buf, int len, VMVALUE *pLineNumber)
 {
     VMVALUE *pLine = (VMVALUE *)cookie;
     *pLineNumber = ++(*pLine);
-    return fgets(buf, len, stdin) != NULL;
+    return VM_getline(buf, len) != NULL;
 }
 
 void fcn_dump(Interpreter *i)

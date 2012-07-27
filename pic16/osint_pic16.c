@@ -21,8 +21,10 @@ DATA_SPACE Sprite g_Sprites[MAX_SPRITES];
 
 void VM_sysinit(int argc, char *argv[])
 {
+#ifdef USE_TV
     int i;
-
+#endif
+    
     SYS_ConfigureClock(FCY_NTSC);
 
     UART_Init(57600);
@@ -74,7 +76,7 @@ void VM_sysexit(void)
 
 #define BS  0xc8
 
-void VM_getline(char *buf, int size)
+char *VM_getline(char *buf, int size)
 {
     int max = size - 2;
     int i = 0;
@@ -86,7 +88,7 @@ void VM_getline(char *buf, int size)
             VM_putchar('\n');
             buf[i++] = '\n';
             buf[i] = '\0';
-            return;
+            return buf;
         case BS:
             if (i > 0) {
                 VM_putchar('\010');
@@ -103,6 +105,8 @@ void VM_getline(char *buf, int size)
             break;
         }
     }
+    
+    return NULL;
 }
 
 void VM_vprintf(const char *fmt, va_list ap)

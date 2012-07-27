@@ -1,8 +1,19 @@
-NAME = ebasic
+NAME = pico-basic
+
+HDRS = \
+db_compiler.h \
+db_edit.h \
+db_image.h \
+db_inttypes.h \
+db_system.h \
+db_types.h \
+db_vm.h \
+db_vmdebug.h \
+db_vmheap.h
 
 EDITOR_OBJS = \
-db_edit.o \
-editbuf.o
+db_edit.c \
+editbuf.c
 
 COMPILER_OBJS = \
 db_compiler.o \
@@ -17,14 +28,18 @@ db_vmfcn.o \
 db_vmheap.o \
 db_vmdebug.o \
 db_system.o \
-osint_propgcc.o
+osint_posix.o
 
 OBJS = pico-basic.o $(EDITOR_OBJS) $(COMPILER_OBJS) $(RUNTIME_OBJS)
 
-ifndef MODEL
-MODEL = xmmc
-endif
+CFLAGS = -Wall -Os -DMAC -m32
+LDFLAGS = $(CFLAGS)
 
-CFLAGS = -Os -DPROPELLER_GCC -DUSE_FDS -DLOAD_SAVE
+$(NAME): $(OBJS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
-include common.mk
+%.o: %.c $(HDRS)
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+clean:
+	rm -f *.o $(NAME).elf

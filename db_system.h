@@ -37,5 +37,7 @@ void Abort(System *sys, const char *fmt, ...);
 
 void VM_printf(const char *fmt, ...);
 void VM_putchar(int ch);
+char *VM_getline(char *buf, int size);
+int VM_getchar(void);
 
 #endif

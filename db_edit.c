@@ -52,7 +52,7 @@ void EditWorkspace(System *sys, UserCmd *userCmds, Handler *evalHandler, void *c
     BufInit();
     
     while (GetLine(sys)) {
-        
+
         if ((token = NextToken(sys)) != NULL) {
             if (ParseNumber(token, &lineNumber)) {
                 if (IsBlank(sys->linePtr)) {

@@ -1,27 +1,32 @@
-NAME = pico-basic
+NAME = ebasic
 
-vpath %.c ..
+EDITOR_OBJS = \
+db_edit.o \
+editbuf.o
 
-OBJS = \
-pico-basic.o \
+COMPILER_OBJS = \
 db_compiler.o \
-db_expr.o \
-db_generate.o \
-db_scan.o \
 db_statement.o \
-db_strings.o \
-db_symbols.o \
-db_system.o \
-db_vmdebug.o \
+db_expr.o \
+db_scan.o \
+db_generate.o
+
+RUNTIME_OBJS = \
+db_vmint.o \
 db_vmfcn.o \
 db_vmheap.o \
-db_vmint.o \
+db_vmdebug.o \
+db_system.o \
 osint_propgcc.o
+
+OBJS = pico-basic.o $(EDITOR_OBJS) $(COMPILER_OBJS) $(RUNTIME_OBJS)
 
 ifndef MODEL
 MODEL = xmmc
 endif
 
-CFLAGS = -Wall -Os -I.. -DPROPELLER_GCC # -DUSE_FDS -DLOAD_SAVE
+CFLAGS = -Os -I.. -DPROPELLER_GCC -DUSE_FDS -DLOAD_SAVE
+
+vpath %.c ..
 
 include common.mk

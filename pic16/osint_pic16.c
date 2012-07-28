@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "db_vm.h"
 
 #include "XGS_PIC_SYSTEM_V010.h"
 #include "XGS_PIC_UART_DRV_V010.h"
+#include "XGS_PIC_KEYBOARD_DRV_V010.h"
 
 #ifdef USE_TV
 
@@ -30,12 +32,14 @@ void VM_sysinit(int argc, char *argv[])
     UART_Init(57600);
     DELAY_MS(500);
 
+#ifdef USE_PS2_KEYBOARD
+    // Keyboard init
+    KEYBRD_Init();
+#endif
+    
 #ifdef USE_TV
     // Init the graphics system
     GFX_InitTile(g_TileFontBitmap, g_TileMap, g_Palettes, g_Sprites);
-
-    // Keyboard init
-    KEYBRD_Init();
 
     // Loop through and give everything their default color
     for(i = 0; i < MAX_PALETTE_SIZE; ++i)
@@ -74,8 +78,6 @@ void VM_sysexit(void)
         ;
 }
 
-#define BS  0xc8
-
 char *VM_getline(char *buf, int size)
 {
     int max = size - 2;
@@ -89,11 +91,12 @@ char *VM_getline(char *buf, int size)
             buf[i++] = '\n';
             buf[i] = '\0';
             return buf;
-        case BS:
+        case '\b':
+        case 0x7f:
             if (i > 0) {
-                VM_putchar('\010');
+                VM_putchar('\b');
                 VM_putchar(' ');
-                VM_putchar('\010');
+                VM_putchar('\b');
                 --i;
             }
             break;
@@ -120,8 +123,13 @@ void VM_vprintf(const char *fmt, va_list ap)
 int VM_getchar(void)
 {
     int ch;
+#ifdef USE_PS2_KEYBOARD
+    while ((ch = KEYBRD_getch()) == 0)
+        ;
+#else
     while ((ch = UART_getchar()) < 0)
         ;
+#endif
     return ch;
 }
 
